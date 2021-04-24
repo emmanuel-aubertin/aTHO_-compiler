@@ -4,7 +4,7 @@ image: gcc
 build:
   stage: build
   script:
-    - apt update && apt -y install make
+    - apt update && apt -y install make flex
     - make clean
     - flex++ -d -otokeniser.cpp tokeniser.l
     - g++ -c tokeniser.cpp
