@@ -1,5 +1,11 @@
-# see https://hub.docker.com/_/gcc/
-image: gcc
+#*******************************************************************************************#
+#*----- Description :   CI for project with flex and  c++                               ****#
+#*----- Auteur      :   (c) 2021 Aubertin Emmanuel                                               ****#
+#*----- GitHub      :   Athomisos    | GitLab : aTHO_                                   ****#
+#*----- LinkedIn    :   linkedin.com/in/emmanuel-aubertin                               ****#
+#*******************************************************************************************#
+
+image: gcc # https://hub.docker.com/_/gcc/
 
 build:
   stage: build
