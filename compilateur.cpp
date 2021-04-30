@@ -299,38 +299,9 @@ void AssignementStatement(void){
 	cout << "\tpop "<<variable<<endl;
 }
 
-void IfStatement(void){
-	unsigned long long tag = TagNumber++;
-	if(lexer->YYText() == "IF"){
-		current = (TOKEN) lexer->yylex();
-		/*if(Expression() != BOOLEAN){
-			Error("Error: Expression in if maight be Boolean");*/
-			cout << "\tpop %rax\t#Get expresion result" << endl;
-			cout << "cmpq $0 %rax\t# Compare" << endl;
-			cout << "\tje Else" << tag << "\tif false jump to else" << tag << endl;
-			if(current == KEYWORD && lexer->YYText() == "THEN" ){
-			}
-
-		//}
-	} else {
-
-		
-		cerr << "Erreur : Un if etais attendue, vous avez rentré '" <<lexer->YYText() << endl;
-		exit(-1);
-	}
-	cout << "\t\t#OUI";
-}
-
-// Statement = Guider vers les bonne procédure
+// Statement := AssignementStatement
 void Statement(void){
-	if(current == KEYWORD)
-		if(lexer->YYText() == "IF"){
-			IfStatement();
-		}
-	else{
-		AssignementStatement();
-	}
-	
+	AssignementStatement();
 }
 
 // StatementPart := Statement {";" Statement} "."
@@ -371,10 +342,3 @@ int main(void){	// First version : Source code on standard input and assembly co
 	}
 
 }
-		
-			
-
-
-
-
-
