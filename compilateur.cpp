@@ -230,7 +230,7 @@ void DeclarationPart(void){
 // RelationalOperator := " == " | " != " | "<" | ">" | "<=" | ">="  
 OPREL RelationalOperator(void){
 	OPREL oprel;
-	if(strcmp(lexer->YYText()," == ") == 0)
+	if(strcmp(lexer->YYText()," = ") == 0)
 		oprel=EQU;
 	else if(strcmp(lexer->YYText()," != ") == 0)
 		oprel=DIFF;
@@ -318,9 +318,9 @@ void Statement(void){
 			/*cout << "# \t lexer->yylex() " << << endl;*/
 		#endif
 
-		if((TOKEN) current == KEYWORD){ // ce if ne passe JAMAIS
+		if((TOKEN) current == KEYWORD){
 			#ifdef DEBUG
-				cout << "# Le if qui passe JAMAIS"<< endl;
+				cout << "# TOKEN == KEYWORD"<< endl;
 			#endif
 
 			if( strcmp(lexer->YYText(),"IF" ) == 0){
@@ -328,10 +328,10 @@ void Statement(void){
 					cout << "# IF STATEMENT" << endl ;
 				#endif
 				IfStatement();
-			} else if( strcmp(lexer->YYText(),"THEN") || strcmp(lexer->YYText(),"ELSE") == 0){
+			} else if( strcmp(lexer->YYText(),"THEN") || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
 				Error("You need to be in a IF");
 			}  else {
-			Error("Pas encore codé");
+			Error("Not code yet");
 			}
 		} else {
 			if( current == ID ){
@@ -406,7 +406,8 @@ void Program(void){
 
 int main(void){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
-	//cout  <<  "\t\t\t# This code was produced by the CERI Compiler" << endl;
+	cout  <<  "\t\t\t# This code was produced by the aTHO Compiler" << endl;
+	cout  <<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;
 	// Let's proceed to the analysis and code production
 	current=(TOKEN) lexer->yylex();
 	Program();

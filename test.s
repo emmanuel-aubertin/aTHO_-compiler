@@ -1,3 +1,5 @@
+			# This code was produced by the aTHO Compiler
+			# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)
 	.data
 	.align 8
 a:	.quad 0

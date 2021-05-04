@@ -27,7 +27,7 @@ number {digit}+
 id {alpha}({alpha}|{digit})*
 addop (\+|\-|\|\|)
 mulop (\*|\/|%|\&\&)
-relop (\<|\>|"=="|\<=|\>=|!=)
+relop (\<|\>|"="|\<=|\>=|!=)
 keyword ("IF"|"THEN"|"ELSE")
 unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"]+
 
