@@ -417,11 +417,11 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[48] =
     {   0,
-        0,    0,   21,   19,   17,   16,   20,    2,   20,   14,
-       15,    2,    1,   10,    1,   12,    4,   19,   11,    3,
-       20,    3,    5,    5,    5,    5,    8,    9,   20,   20,
-       19,   17,    3,    0,    2,   18,    4,   13,    5,    5,
-        5,    5,    1,    6,    5,    5,    0
+        0,    0,   21,   19,   17,   16,   20,    3,   20,   14,
+       15,    3,    2,   10,    2,   12,    5,   19,   11,    4,
+       20,    4,    6,    6,    6,    6,    8,    9,   20,   20,
+       19,   17,    4,    0,    3,   18,    5,   13,    6,    6,
+        1,    6,    2,    7,    6,    6,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -835,37 +835,37 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 36 "tokeniser.l"
-return ADDOP;
+return KEYWORD;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
 #line 37 "tokeniser.l"
-return MULOP;
+return ADDOP;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
 #line 38 "tokeniser.l"
-return RELOP;
+return MULOP;
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
 #line 39 "tokeniser.l"
-return NUMBER;
+return RELOP;
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
 #line 40 "tokeniser.l"
-return ID;
+return NUMBER;
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 41 "tokeniser.l"
-return STRINGCONST;
+return ID;
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 42 "tokeniser.l"
-return KEYWORD;
+return STRINGCONST;
 	YY_BREAK
 case 8:
 YY_RULE_SETUP

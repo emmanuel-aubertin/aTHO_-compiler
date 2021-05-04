@@ -28,6 +28,8 @@
 
 using namespace std;
 
+//#define DEBUG
+
 // Prototypage :
 void IfStatement(void);
 
@@ -247,6 +249,9 @@ OPREL RelationalOperator(void){
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 void Expression(void){
+	#ifdef DEBUG
+		cout << endl << "# IN void Expression(void)" << endl;
+	#endif
 	OPREL oprel;
 	SimpleExpression();
 	if(current == RELOP){
@@ -304,36 +309,60 @@ void AssignementStatement(void){
 
 // Statement := AssignementStatement
 void Statement(void){
-	if(current == KEYWORD){
-		cout << "# Inside the IF of statement()"<< endl;
-		if( strcmp(lexer->YYText(),"IF" ) == 0){
-			IfStatement();
-		} else{
-		Error("Pas encore codé");
-		}
-	}else{
-		if( current == ID ){
-			cout << "# Inside the else of ("<< typeid(lexer->YYText()).name() << ")" << lexer->YYText() << " != \"IF\")"<< endl;
-			AssignementStatement();
+	if(strcmp(lexer->YYText(),"" ) != 0){
+		#ifdef DEBUG
+			cout << "# curent ==> " << (TOKEN) current << endl;
+			cout << "# lexer->YYText() = " /*<< lexer->YYText()*/ << endl;
+			cout << "# Type ==> " << (string) typeid(current).name() << endl;
+			/*cout << "# \t lexer->yylex() " << << endl;*/
+		#endif
+		if((TOKEN) current == KEYWORD){ // ce if ne passe JAMAIS
+			#ifdef DEBUG
+				cout << "# Le if qui passe JAMAIS"<< endl;
+			#endif
+
+			if( strcmp(lexer->YYText(),"IF" ) == 0){
+				#ifdef DEBUG
+					cout << "# IF STATEMENT" << endl ;
+				#endif
+				IfStatement();
+			} else {
+			Error("Pas encore codé");
+			}
 		} else {
-			Error("Instruction unreachable !");
+			if( current == ID ){
+				#ifdef DEBUG
+					cout << "# Inside the else of ("<< typeid(lexer->YYText()).name() << ")" << lexer->YYText() << " != \"IF\")"<< endl;
+				#endif
+				AssignementStatement();
+			} else {
+				Error("Instruction unreachable !");
+			}
 		}
 	}
 }
-/**A ajouter dans test.p :
-IF (z < 2) THEN
-z:=6. **/
 
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
 	unsigned long long tag=TagNumber++; // For unique name in asm program
-	current=(TOKEN) lexer->yylex(); // Get and cast next word
-	cout << "\tpop %rax\t# Get the result of expression" << endl;
-	cout << "\tcmpq $0, %rax\t# Compare " << endl;
-	cout << "\tje Else" << tag << "\t# jmp to Else" << tag << "if la comparaison est fausse" << endl;
+	current = (TOKEN) lexer->yylex(); // Get and cast next word
+	//cout << "\tpop %rax\t# Get the result of expression" << endl;
 
-	if( current != KEYWORD || strcmp(lexer->YYText(),"THEN")  !=  0 ) { // Mémo en pascal on écrit IF Machin THEN JeFaisMachin
-		Error("'THEN' attendu, en pascal on écrit IF Machin THEN JeFaisMachin");
+	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
+		Expression();
+	} else {
+		Error("Une exp était attendu");
+	}
+	cout << "\tpop %rax\t# Get the result of expression" << endl;
+	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
+	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if la comparaison est fausse" << endl;
+	
+	#ifdef DEBUG
+		cout << "# WORD ==> " << lexer->YYText() << endl;
+	#endif
+
+	if(  current != KEYWORD || strcmp(lexer->YYText(),"THEN")  !=  0 ) { // Mémo en pascal on écrit IF Machin THEN JeFaisMachin
+		Error(" Un 'THEN' attendu, en pascal on écrit IF Machin THEN JeFaisMachin");
 	}
 	current=(TOKEN) lexer->yylex();
 	Statement();
@@ -341,7 +370,7 @@ void IfStatement(void){
 	cout << "\tjmp Next" << tag << "\t# Si le if est fais on skip le else" << endl;
 	cout << "Else" << tag << ":" << endl;
 
-	if( current == KEYWORD && strcmp(lexer->YYText(),"ELSE" ) == 0){
+	if(/* current == KEYWORD &&*/ strcmp(lexer->YYText(),"ELSE" ) == 0){
 		current=(TOKEN) lexer->yylex();
 		Statement();
 	}
@@ -373,7 +402,7 @@ void Program(void){
 
 int main(void){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
-	cout  <<  "\t\t\t# This code was produced by the CERI Compiler" << endl;
+	//cout  <<  "\t\t\t# This code was produced by the CERI Compiler" << endl;
 	// Let's proceed to the analysis and code production
 	current=(TOKEN) lexer->yylex();
 	Program();

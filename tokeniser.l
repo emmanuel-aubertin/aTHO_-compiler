@@ -19,36 +19,36 @@ using namespace std;
 %option c++
 %option yylineno
 
-stringconst  			\"[^\n"]+\"
-ws      				[ \t\n\r]+
-alpha   				[A-Za-z]
-digit   				[0-9]
-number  				{digit}+
-id						{alpha}({alpha}|{digit})*
-addop					(\+|\-|\|\|)
-mulop					(\*|\/|%|\&\&)
-relop					(\<|\>|"=="|\<=|\>=|!=)
-keyword 				("IF"|"THEN"|"ELSE")
-unknown 				[^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"]+
+stringconst \"[^\n"]+\"
+ws [ \t\n\r]+
+alpha [A-Za-z]
+digit [0-9]
+number {digit}+
+id {alpha}({alpha}|{digit})*
+addop (\+|\-|\|\|)
+mulop (\*|\/|%|\&\&)
+relop (\<|\>|"=="|\<=|\>=|!=)
+keyword ("IF"|"THEN"|"ELSE")
+unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"]+
 
 %%
 
-{addop}					return ADDOP;
-{mulop}					return MULOP;
-{relop}					return RELOP;
-{number}				return NUMBER;
-{id}					return ID;
-{stringconst}			return STRINGCONST;
-{keyword}				return KEYWORD;
-"["						return RBRACKET;
-"]"						return LBRACKET;
-","						return COMMA;
-";"						return SEMICOLON;
-"."						return DOT;
-":="					return ASSIGN;
-"("						return RPARENT;
-")"						return LPARENT;
-"!"						return NOT;
+{keyword} return KEYWORD;
+{addop} return ADDOP;
+{mulop} return MULOP;
+{relop} return RELOP;
+{number} return NUMBER;
+{id} return ID;
+{stringconst} return STRINGCONST;
+"[" return RBRACKET;
+"]" return LBRACKET;
+"," return COMMA;
+";" return SEMICOLON;
+"." return DOT;
+":=" return ASSIGN;
+"(" return RPARENT;
+")" return LPARENT;
+"!" return NOT;
 
 <<EOF>>					return FEOF;
 {ws}    {/* skip blanks and tabs */};
