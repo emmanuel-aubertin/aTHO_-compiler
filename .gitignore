@@ -3,3 +3,4 @@ tokeniser.cpp
 tokeniser.o
 test.s
 test
+.vscode/
