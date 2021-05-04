@@ -310,12 +310,14 @@ void AssignementStatement(void){
 // Statement := AssignementStatement
 void Statement(void){
 	if(strcmp(lexer->YYText(),"" ) != 0){
+
 		#ifdef DEBUG
 			cout << "# curent ==> " << (TOKEN) current << endl;
 			cout << "# lexer->YYText() = " /*<< lexer->YYText()*/ << endl;
 			cout << "# Type ==> " << (string) typeid(current).name() << endl;
 			/*cout << "# \t lexer->yylex() " << << endl;*/
 		#endif
+
 		if((TOKEN) current == KEYWORD){ // ce if ne passe JAMAIS
 			#ifdef DEBUG
 				cout << "# Le if qui passe JAMAIS"<< endl;
@@ -326,7 +328,9 @@ void Statement(void){
 					cout << "# IF STATEMENT" << endl ;
 				#endif
 				IfStatement();
-			} else {
+			} else if( strcmp(lexer->YYText(),"THEN") || strcmp(lexer->YYText(),"ELSE") == 0){
+				Error("You need to be in a IF");
+			}  else {
 			Error("Pas encore codé");
 			}
 		} else {
