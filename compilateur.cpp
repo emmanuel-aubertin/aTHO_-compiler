@@ -330,7 +330,8 @@ void Statement(void){
 				IfStatement();
 			} else if( strcmp(lexer->YYText(),"THEN") || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
 				Error("You need to be in a IF");
-			}  else {
+			} else if( strcmp(lexer->YYText(),"WHILE" ) == 0){
+			} else {
 			Error("Not code yet");
 			}
 		} else {
