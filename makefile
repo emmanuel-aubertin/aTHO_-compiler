@@ -1,8 +1,8 @@
 all:	test
 clean:
 		@echo "\n\e[32m--------| \e[1;32mCLEANING\e[0m\e[32m |--------\e[0m"
-		rm *.o *.s
-		rm tokeniser.cpp test
+		rm -f *.o *.s
+		rm -f tokeniser.cpp test
 		@echo "\e[32m\tDONE\e[0m"
 tokeniser.cpp:	tokeniser.l
 		@echo "\n\e[32m--------| \e[1;32mCompilation of tokeniser.l\e[0m\e[32m |--------\e[0m"
