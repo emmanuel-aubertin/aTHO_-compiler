@@ -28,10 +28,12 @@
 
 using namespace std;
 
-//#define DEBUG
+#define DEBUG
 
 // Prototypage :
 void IfStatement(void);
+void WhileStatement(void);
+void ForStatement(void);
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -328,16 +330,28 @@ void Statement(void){
 					cout << "# IF STATEMENT" << endl ;
 				#endif
 				IfStatement();
-			} else if( strcmp(lexer->YYText(),"THEN") || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
+			} else if( strcmp(lexer->YYText(),"THEN") == 0 || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
+				#ifdef DEBUG
+					cout << "# THEN or ELSE outside of IF" << endl ;
+				#endif
 				Error("You need to be in a IF");
 			} else if( strcmp(lexer->YYText(),"WHILE" ) == 0){
+				#ifdef DEBUG
+					cout << "# WHILE STATEMENT" << endl ;
+				#endif
+				WhileStatement();
+			} else if( strcmp(lexer->YYText(),"FOR" ) == 0){
+				#ifdef DEBUG
+					cout << "# FOR STATEMENT" << endl ;
+				#endif
+				ForStatement();
 			} else {
 			Error("Not code yet");
 			}
 		} else {
 			if( current == ID ){
 				#ifdef DEBUG
-					cout << "# Inside the else of ("<< typeid(lexer->YYText()).name() << ")" << lexer->YYText() << " != \"IF\")"<< endl;
+					cout << "# # TOKEN == ID" << endl;
 				#endif
 				AssignementStatement();
 			} else {
@@ -347,11 +361,62 @@ void Statement(void){
 	}
 }
 
+
+// WHILE <Expression> DO <Statement>
+void WhileStatement(void){
+	#ifdef DEBUG
+		cout << "# In WhileStatement(void)" << endl;
+	#endif
+	unsigned long long tag=TagNumber++;
+	current = (TOKEN) lexer->yylex();
+	cout << "While" << tag << ":" << endl;
+
+	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
+		Expression();
+	} else {
+		Error("Expression needed ! `WHILE <Expression> DO <Statement>.`");
+	}
+
+	cout << "\tpop %rax" << endl;
+	cout << "\tcmp $0, %rax" << endl;
+	cout << "\tje EndWhile" << tag <<endl;
+	if(current == KEYWORD && strcmp(lexer->YYText(),"DO")  ==  0){
+		current = (TOKEN) lexer->yylex();
+		Statement();
+	} else {
+		Error("DO missing !");
+	}
+	cout << "jmp While" << tag << endl;
+	cout << "EndWhile" << tag << ":" << endl;
+}
+
+// FOR <AssignementStatement> To <Expression> DO <Statement>
+void ForStatement(void){
+	#ifdef DEBUG
+		cout << "# In ForStatement(void)" << endl;
+	#endif
+	unsigned long long tag=TagNumber++;
+	current = (TOKEN) lexer->yylex();
+
+	cout << "For" << tag << ":" << endl;
+
+	#ifdef DEBUG
+		cout << "# WORD = " << lexer->YYText() << endl;
+	#endif
+
+	AssignementStatement();
+
+	if( current == KEYWORD || strcmp(lexer->YYText(), "To")){
+		cout << "# To KEYWORD" << endl;
+	}
+	cout << "jmp For" << tag << endl;
+	cout << "EndFor" << tag << ":" << endl;
+}
+
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
 	unsigned long long tag=TagNumber++; // For unique name in asm program
 	current = (TOKEN) lexer->yylex(); // Get and cast next word
-	//cout << "\tpop %rax\t# Get the result of expression" << endl;
 
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
 		Expression();

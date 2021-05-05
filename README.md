@@ -54,5 +54,6 @@ To : 64 bit 80x86 assembly langage (AT&T)
 // Letter := "a"|...|"z"
 
 ## Dep :
-
-flex flexc++ libfl-dev
+```
+apt install flex flexc++ libfl-dev
+```

@@ -28,8 +28,8 @@ id {alpha}({alpha}|{digit})*
 addop (\+|\-|\|\|)
 mulop (\*|\/|%|\&\&)
 relop (\<|\>|"="|\<=|\>=|!=)
-keyword ("IF"|"THEN"|"ELSE")
-unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"]+
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"DO"|"FOR"|"To")
+unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"\"WHILE"\"DO"\"FOR"\"To"]+
 
 %%
 

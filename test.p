@@ -1,3 +1,3 @@
-[a,b,c,z]
-z:=4;
-IF(z<2) THEN b:=8+3.
+[z,i]
+z:=1;
+FOR i:=0 To 5 DO z:=z+1.
