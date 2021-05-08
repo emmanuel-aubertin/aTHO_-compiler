@@ -28,14 +28,14 @@
 
 using namespace std;
 
-#define FOR_DEBUG
-//#define IF_DEBUG
+//#define DEBUG
 
 // Prototypage :
 void IfStatement(void);
 void WhileStatement(void);
 void ForStatement(void);
 void BlockStatement(void);
+
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -347,6 +347,11 @@ void Statement(void){
 					cout << "# FOR STATEMENT" << endl ;
 				#endif
 				ForStatement();
+			} else if( strcmp(lexer->YYText(),"BEGIN" ) == 0){
+				#ifdef DEBUG
+					cout << "# BLOCK STATEMENT" << endl ;
+				#endif
+				BlockStatement(); 
 			} else {
 			Error("Not code yet");
 			}
@@ -395,13 +400,13 @@ void WhileStatement(void){
 
 // FOR <AssignementStatement> To <Expression> DO <Statement>
 void ForStatement(void){
-	#ifdef FOR_DEBUG
+	#ifdef DEBUG
 		cout << "# In ForStatement(void)" << endl;
 	#endif
 	unsigned long long tag=TagNumber++;
 	current = (TOKEN) lexer->yylex();
 
-	#ifdef FOR_DEBUG
+	#ifdef DEBUG
 		cout << "# WORD = " << lexer->YYText() << endl;
 	#endif
 	
@@ -434,6 +439,47 @@ void ForStatement(void){
 	cout << "EndFor" << tag << ":" << endl;
 }
 
+// "BEGIN" Statement { ";" Statement } "END"
+void BlockStatement(void){
+	#ifdef DEBUG
+		cout << "# In BlockStatement(void)" << endl;
+	#endif
+	// unsigned long long tag=TagNumber++; Use less here
+	current = (TOKEN) lexer->yylex();
+	
+	while ( current != KEYWORD)
+	{
+		#ifdef DEBUG
+			cout << "# CURRENT ==> " << lexer->YYText() << endl;
+		#endif
+		AssignementStatement();
+		if(strcmp(lexer->YYText(), ";") == 0){
+			#ifdef DEBUG
+				cout << "# CURRENT ==> " << lexer->YYText() << endl;
+			#endif
+			current = (TOKEN) lexer->yylex();// skip ;
+		} else {
+			Error(";");
+		}
+	}
+	#ifdef DEBUG
+				cout << "# after while ==> " << lexer->YYText() << endl;
+			#endif
+	//current = (TOKEN) lexer->yylex();
+	if( current == KEYWORD && strcmp(lexer->YYText(), "END") == 0){
+		current = (TOKEN) lexer->yylex();
+		if(strcmp(lexer->YYText(), ";") == 0){
+			current = (TOKEN) lexer->yylex(); // skip ;
+		}
+	} else {
+		Error("END Missing");
+	}
+	#ifdef DEBUG
+		cout << "# BEFORE END  " << lexer->YYText() << endl;
+	#endif
+	//Statement();
+}
+
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
 	unsigned long long tag=TagNumber++; // For unique name in asm program
@@ -448,7 +494,7 @@ void IfStatement(void){
 	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
 	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if la comparaison est fausse" << endl;
 	
-	#ifdef IF_DEBUG
+	#ifdef DEBUG
 		cout << "# WORD ==> " << lexer->YYText() << endl;
 	#endif
 
