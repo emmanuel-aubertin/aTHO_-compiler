@@ -28,12 +28,14 @@
 
 using namespace std;
 
-#define DEBUG
+#define FOR_DEBUG
+//#define IF_DEBUG
 
 // Prototypage :
 void IfStatement(void);
 void WhileStatement(void);
 void ForStatement(void);
+void BlockStatement(void);
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -362,7 +364,8 @@ void Statement(void){
 }
 
 
-// WHILE <Expression> DO <Statement>
+// WHILE <Expression> DO <Statement> //FOR 0 To 5 DO z:=z+1.
+
 void WhileStatement(void){
 	#ifdef DEBUG
 		cout << "# In WhileStatement(void)" << endl;
@@ -392,24 +395,42 @@ void WhileStatement(void){
 
 // FOR <AssignementStatement> To <Expression> DO <Statement>
 void ForStatement(void){
-	#ifdef DEBUG
+	#ifdef FOR_DEBUG
 		cout << "# In ForStatement(void)" << endl;
 	#endif
 	unsigned long long tag=TagNumber++;
 	current = (TOKEN) lexer->yylex();
 
-	cout << "For" << tag << ":" << endl;
-
-	#ifdef DEBUG
+	#ifdef FOR_DEBUG
 		cout << "# WORD = " << lexer->YYText() << endl;
 	#endif
-
-	AssignementStatement();
-
-	if( current == KEYWORD || strcmp(lexer->YYText(), "To")){
-		cout << "# To KEYWORD" << endl;
+	
+	if( current == NUMBER){
+		cout << "movq $" << lexer->YYText() << ", %rcx # Get Start value" << endl;
+		current = (TOKEN) lexer->yylex();
+	} else {
+		Error("Need Digit");
 	}
-	cout << "jmp For" << tag << endl;
+
+	cout << "For" << tag << ":" << endl;
+	cout << "\taddq	$1, %rcx \t# OR" << endl;
+
+	if( current == KEYWORD || strcmp(lexer->YYText(), "To") == 0){
+		current = (TOKEN) lexer->yylex(); // Get digit after To
+		cout << "\tcmp $" << lexer->YYText() << ", %rcx # To KEYWORD" << endl;
+		cout << "\tjae EndFor"<< tag << endl;
+		current = (TOKEN) lexer->yylex(); // Get Do
+	} else {
+		Error("To requiered");
+	}
+
+	if( current == KEYWORD || strcmp(lexer->YYText(), "DO") == 0 ){
+		current = (TOKEN) lexer->yylex(); // Get Expression
+		Statement();
+	} else {
+		Error("DO requiered");
+	}
+	cout << "\tjmp For" << tag << endl;
 	cout << "EndFor" << tag << ":" << endl;
 }
 
@@ -427,7 +448,7 @@ void IfStatement(void){
 	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
 	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if la comparaison est fausse" << endl;
 	
-	#ifdef DEBUG
+	#ifdef IF_DEBUG
 		cout << "# WORD ==> " << lexer->YYText() << endl;
 	#endif
 
@@ -439,8 +460,8 @@ void IfStatement(void){
 
 	cout << "\tjmp Next" << tag << "\t# Si le if est fais on skip le else" << endl;
 	cout << "Else" << tag << ":" << endl;
-
-	if(/* current == KEYWORD &&*/ strcmp(lexer->YYText(),"ELSE" ) == 0){
+	current=(TOKEN) lexer->yylex();
+	if( current == KEYWORD || strcmp(lexer->YYText(),"ELSE" ) == 0){
 		current=(TOKEN) lexer->yylex();
 		Statement();
 	}

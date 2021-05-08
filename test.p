@@ -1,3 +1,5 @@
-[z,i]
-z:=1;
-FOR i:=0 To 5 DO z:=z+1.
+[a]
+
+a := 1;
+
+FOR 0 To 4 DO a := a + 1.
