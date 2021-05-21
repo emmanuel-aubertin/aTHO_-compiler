@@ -352,6 +352,16 @@ void Statement(void){
 					cout << "# BLOCK STATEMENT" << endl ;
 				#endif
 				BlockStatement(); 
+			} else if( strcmp(lexer->YYText(),"DO" ) == 0){
+				#ifdef DEBUG
+					cout << "# BLOCK STATEMENT" << endl ;
+				#endif
+				BlockStatement(); 
+			} else if( strcmp(lexer->YYText(),"END" ) == 0){
+				#ifdef DEBUG
+					cout << "# END STATEMENT" << endl ;
+				#endif
+				Statement();
 			} else {
 			Error("Not code yet");
 			}
@@ -368,12 +378,10 @@ void Statement(void){
 	}
 }
 
-
 // WHILE <Expression> DO <Statement> //FOR 0 To 5 DO z:=z+1.
-
 void WhileStatement(void){
 	#ifdef DEBUG
-		cout << "# In WhileStatement(void)" << endl;
+		cout << "# ----------- WhileStatement(void) -----------" << endl;
 	#endif
 	unsigned long long tag=TagNumber++;
 	current = (TOKEN) lexer->yylex();
@@ -398,10 +406,11 @@ void WhileStatement(void){
 	cout << "EndWhile" << tag << ":" << endl;
 }
 
+
 // FOR <AssignementStatement> To <Expression> DO <Statement>
 void ForStatement(void){
 	#ifdef DEBUG
-		cout << "# In ForStatement(void)" << endl;
+		cout << "# ----------- ForStatement(void) -----------" << endl;
 	#endif
 	unsigned long long tag=TagNumber++;
 	current = (TOKEN) lexer->yylex();
@@ -431,7 +440,7 @@ void ForStatement(void){
 
 	if( current == KEYWORD || strcmp(lexer->YYText(), "DO") == 0 ){
 		current = (TOKEN) lexer->yylex(); // Get Expression
-		Statement();
+		BlockStatement();
 	} else {
 		Error("DO requiered");
 	}
@@ -442,17 +451,18 @@ void ForStatement(void){
 // "BEGIN" Statement { ";" Statement } "END"
 void BlockStatement(void){
 	#ifdef DEBUG
-		cout << "# In BlockStatement(void)" << endl;
+		cout << "# ----------- BlockStatement(void) -----------" << endl;
 	#endif
 	// unsigned long long tag=TagNumber++; Use less here
-	current = (TOKEN) lexer->yylex();
-	
-	while ( current != KEYWORD)
+	if( current == KEYWORD){
+		Statement();
+	}
+	while ( current != KEYWORD )
 	{
 		#ifdef DEBUG
 			cout << "# CURRENT ==> " << lexer->YYText() << endl;
 		#endif
-		AssignementStatement();
+		Statement();
 		if(strcmp(lexer->YYText(), ";") == 0){
 			#ifdef DEBUG
 				cout << "# CURRENT ==> " << lexer->YYText() << endl;
@@ -463,8 +473,8 @@ void BlockStatement(void){
 		}
 	}
 	#ifdef DEBUG
-				cout << "# after while ==> " << lexer->YYText() << endl;
-			#endif
+		cout << "# after while ==> " << lexer->YYText() << endl;
+	#endif
 	//current = (TOKEN) lexer->yylex();
 	if( current == KEYWORD && strcmp(lexer->YYText(), "END") == 0){
 		current = (TOKEN) lexer->yylex();
@@ -551,5 +561,4 @@ int main(void){	// First version : Source code on standard input and assembly co
 		cerr  << "Caractères en trop à la fin du programme : [" << current << "]";
 		Error("."); // unexpected characters at the end of program
 	}
-
 }

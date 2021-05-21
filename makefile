@@ -20,6 +20,7 @@ test:		compilateur test.p
 	@echo "\e[32m--------| \e[1mTest of compilateur\e[0m\e[32m |--------\e[0m"
 	./compilateur <test.p >test.s
 	gcc  -ggdb -no-pie -fno-pie test.s -o test
+	chmod +x test
 	@echo "\e[32m\tDONE\e[0m"
 install:
 	@echo "\e[32m--------| \e[1mInstallation of dep\e[0m\e[32m |--------\e[0m"
