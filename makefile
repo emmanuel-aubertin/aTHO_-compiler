@@ -24,5 +24,5 @@ test:		compilateur test.p
 	@echo "\e[32m\tDONE\e[0m"
 install:
 	@echo "\e[32m--------| \e[1mInstallation of dep\e[0m\e[32m |--------\e[0m"
-	sudo apt install flex flexc++ libfl-dev
+	sudo apt install flex flexc++ libfl-dev gcc g++
 	@echo "\e[32m\tDONE\e[0m"
