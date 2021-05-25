@@ -1,7 +1,6 @@
 # aTHO_ compiler
 
-Current version :
-[![pipeline status](https://gitlab.com/aTHO_/ue_compilateur/badges/master/pipeline.svg)](https://gitlab.com/aTHO_/ue_compilateur/-/commits/master)
+Current version :[![pipeline status](https://gitlab.com/aTHO_/ue_compilateur/badges/master/pipeline.svg)](https://gitlab.com/aTHO_/ue_compilateur/-/commits/master)
 
 A simple compiler. 
 

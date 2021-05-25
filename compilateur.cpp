@@ -30,16 +30,18 @@ using namespace std;
 
 //#define DEBUG
 
+enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
+enum OPADD {ADD, SUB, OR, WTFA};
+enum OPMUL {MUL, DIV, MOD, AND ,WTFM};/*
+enum IDTYPE {ID, FUNC, VAR, BOOLEAN};
+enum VARTYPE {UNSIGNED_INT, OTHER};*/
+
 // Prototypage :
 void IfStatement(void);
 void WhileStatement(void);
 void ForStatement(void);
 void BlockStatement(void);
-
-
-enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
-enum OPADD {ADD, SUB, OR, WTFA};
-enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
+//VARTYPE Number(void);
 
 TOKEN current;				// Current token
 
@@ -92,6 +94,8 @@ void Number(void){
 	cout  << "\tpush $" << atoi(lexer->YYText()) << endl;
 	current=(TOKEN) lexer->yylex();
 }
+
+
 
 void Expression(void);			// Called by Term() and calls Term()
 
@@ -378,7 +382,7 @@ void Statement(void){
 	}
 }
 
-// WHILE <Expression> DO <Statement> //FOR 0 To 5 DO z:=z+1.
+// WHILE <Expression> DO <Statement> 	
 void WhileStatement(void){
 	#ifdef DEBUG
 		cout << "# ----------- WhileStatement(void) -----------" << endl;
@@ -398,7 +402,7 @@ void WhileStatement(void){
 	cout << "\tje EndWhile" << tag <<endl;
 	if(current == KEYWORD && strcmp(lexer->YYText(),"DO")  ==  0){
 		current = (TOKEN) lexer->yylex();
-		Statement();
+		BlockStatement();
 	} else {
 		Error("DO missing !");
 	}
