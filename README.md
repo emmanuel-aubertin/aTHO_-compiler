@@ -21,6 +21,8 @@ For all other distributions, it is sufficient to install all these dependencies:
 
 `flex`, `flexc++`, `libfl-dev`, `g++`, `gcc`
 
-## Pascal-like doc :
+## Documentation :
 
-The documentation will be available very soon :)
+If you want more documentation (MakeFile, Pascal-Like ...), you can go [here](https://gitlab.com/aTHO_/ue_compilateur/-/wikis/home)
+
+Updated 25 May 2021 by [Aubertin Emmanuel](https://www.linkedin.com/in/emmanuel-aubertin/)
