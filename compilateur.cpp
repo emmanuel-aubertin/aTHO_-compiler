@@ -28,19 +28,20 @@
 
 using namespace std;
 
-//#define DEBUG
+//#define DEBUG // if define the asm wil be have a lot of useless com
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
-enum OPMUL {MUL, DIV, MOD, AND ,WTFM};/*
-enum IDTYPE {ID, FUNC, VAR, BOOLEAN};
-enum VARTYPE {UNSIGNED_INT, OTHER};*/
+enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
+enum TYPE {INTEGER, BOOLEAN};
 
 // Prototypage :
 void IfStatement(void);
 void WhileStatement(void);
 void ForStatement(void);
 void BlockStatement(void);
+void DisplayStatement(void);
+TYPE Expression(void);
 //VARTYPE Number(void);
 
 TOKEN current;				// Current token
@@ -85,37 +86,40 @@ void Error(string s){
 // Letter := "a"|...|"z"
 	
 		
-void Identifier(void){
+TYPE Identifier(void){
 	cout  <<  "\tpush " << lexer->YYText() << endl;
 	current=(TOKEN) lexer->yylex();
+	return INTEGER;
 }
 
-void Number(void){
+TYPE Number(void){
 	cout  << "\tpush $" << atoi(lexer->YYText()) << endl;
 	current=(TOKEN) lexer->yylex();
+	return INTEGER;
 }
 
-
-
-void Expression(void);			// Called by Term() and calls Term()
-
-void Factor(void){
+TYPE Factor(void){
+	TYPE typeExp;
 	if(current == RPARENT){
 		current=(TOKEN) lexer->yylex();
-		Expression();
+		typeExp = Expression();
 		if(current != LPARENT)
 			Error("')' était attendu");		// ")" expected
 		else
 			current=(TOKEN) lexer->yylex();
 	}
-	else 
-		if (current == NUMBER)
-			Number();
-	     	else
-				if(current == ID)
-					Identifier();
-				else
-					Error("'(' ou chiffre ou lettre attendue");
+	else{
+		if (current == NUMBER){
+			typeExp = Number();
+		} else {
+			if(current == ID){
+				typeExp = Identifier();
+			} else {
+				Error("'(' ou chiffre ou lettre attendue");
+			}
+		}
+	}
+	return typeExp;
 }
 
 // MultiplicativeOperator := "*" | "/" | "%" | " && "
@@ -135,12 +139,16 @@ OPMUL MultiplicativeOperator(void){
 }
 
 // Term := Factor {MultiplicativeOperator Factor}
-void Term(void){
+TYPE Term(void){
+	TYPE firstFactor, secondFactor;
 	OPMUL mulop;
-	Factor();
+	firstFactor = Factor();
 	while(current == MULOP){
 		mulop=MultiplicativeOperator();		// Save operator in local variable
-		Factor();
+		secondFactor = Factor();
+		if(firstFactor != secondFactor){ // If not same type
+			Error("Type non compatible !");
+		}
 		cout  <<  "\tpop %rbx" << endl;	// get first operand
 		cout  <<  "\tpop %rax" << endl;	// get second operand
 		switch(mulop){
@@ -166,6 +174,7 @@ void Term(void){
 				Error("opérateur multiplicatif attendu");
 		}
 	}
+	return firstFactor;
 }
 
 // AdditiveOperator := "+" | "-" | " || "
@@ -183,12 +192,16 @@ OPADD AdditiveOperator(void){
 }
 
 // SimpleExpression := Term {AdditiveOperator Term}
-void SimpleExpression(void){
+TYPE SimpleExpression(void){
+	TYPE firstTerm, secondTerm;
 	OPADD adop;
-	Term();
+	firstTerm = Term();
 	while(current == ADDOP){
 		adop=AdditiveOperator();		// Save operator in local variable
-		Term();
+		secondTerm = Term();
+		if(firstTerm != secondTerm){// If not same type
+			Error("Type non compatible !");
+		}
 		cout  <<  "\tpop %rbx" << endl;	// get first operand
 		cout  <<  "\tpop %rax" << endl;	// get second operand
 		switch(adop){
@@ -206,33 +219,37 @@ void SimpleExpression(void){
 		}
 		cout  <<  "\tpush %rax" << endl;			// store result
 	}
-
+	return firstTerm;
 }
 
 // DeclarationPart := "[" Ident {"," Ident} "]"
 void DeclarationPart(void){
-	if(current != RBRACKET)
-		Error("caractère '[' attendu");
 	cout  <<  "\t.data" << endl;
-	cout  <<  "\t.align 8" << endl;
-	
-	current=(TOKEN) lexer->yylex();
-	if(current != ID)
-		Error("Un identificater était attendu");
-	cout  <<  lexer->YYText()  <<  ":\t.quad 0" << endl;
-	DeclaredVariables.insert(lexer->YYText());
-	current=(TOKEN) lexer->yylex();
-	while(current == COMMA){
+	cout << "\tFormatString:\t.string \"\\n\"  # string to DISPLAY :" << endl;
+	cout << "FormatString1:    .string \"%llu\\n\"" << endl;
+	if(current == RBRACKET){
+		#ifdef DEBUG
+			cout << "# IN [" << endl;
+		#endif
+		cout  <<  "\t.align 8" << endl;
+		
 		current=(TOKEN) lexer->yylex();
 		if(current != ID)
-			Error("Un identificateur était attendu");
+			Error("Un identificater était attendu");
 		cout  <<  lexer->YYText()  <<  ":\t.quad 0" << endl;
 		DeclaredVariables.insert(lexer->YYText());
 		current=(TOKEN) lexer->yylex();
+		while(current == COMMA){
+			current=(TOKEN) lexer->yylex();
+			if(current != ID)
+				Error("Un identificateur était attendu");
+			cout  <<  lexer->YYText()  <<  ":\t.quad 0" << endl;
+			DeclaredVariables.insert(lexer->YYText());
+			current=(TOKEN) lexer->yylex();
+		}
+		current=(TOKEN) lexer->yylex();
 	}
-	if(current != LBRACKET)
-		Error("caractère ']' attendu");
-	current=(TOKEN) lexer->yylex();
+	
 }
 
 // RelationalOperator := " == " | " != " | "<" | ">" | "<=" | ">="  
@@ -256,15 +273,19 @@ OPREL RelationalOperator(void){
 }
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
-void Expression(void){
+TYPE Expression(void){
+	TYPE firstPart, secondPart; 
 	#ifdef DEBUG
 		cout << endl << "# IN void Expression(void)" << endl;
 	#endif
 	OPREL oprel;
-	SimpleExpression();
+	firstPart = SimpleExpression();
 	if(current == RELOP){
 		oprel=RelationalOperator();
-		SimpleExpression();
+		secondPart = SimpleExpression();
+		if(firstPart != secondPart){ // If not same type
+			Error("Type non compatible !");
+		}
 		cout  <<  "\tpop %rax" << endl;
 		cout  <<  "\tpop %rbx" << endl;
 		cout  <<  "\tcmpq %rax, %rbx" << endl;
@@ -295,6 +316,7 @@ void Expression(void){
 		cout  <<  "Vrai" << TagNumber << ":\tpush $0xFFFFFFFFFFFFFFFF\t\t# True" << endl;	
 		cout  <<  "Suite" << TagNumber << ":" << endl;
 	}
+	return BOOLEAN;
 }
 
 // AssignementStatement := Identifier ":=" Expression
@@ -320,10 +342,7 @@ void Statement(void){
 	if(strcmp(lexer->YYText(),"" ) != 0){
 
 		#ifdef DEBUG
-			cout << "# curent ==> " << (TOKEN) current << endl;
-			cout << "# lexer->YYText() = " /*<< lexer->YYText()*/ << endl;
-			cout << "# Type ==> " << (string) typeid(current).name() << endl;
-			/*cout << "# \t lexer->yylex() " << << endl;*/
+			cout << "# ----------- In Statement(void) ----------- " << endl;
 		#endif
 
 		if((TOKEN) current == KEYWORD){
@@ -366,6 +385,17 @@ void Statement(void){
 					cout << "# END STATEMENT" << endl ;
 				#endif
 				Statement();
+			}else if( strcmp(lexer->YYText(),"DISPLAY" ) == 0){
+				#ifdef DEBUG
+					cout << "# DISPLAY STATEMENT" << endl ;
+				#endif
+				DisplayStatement();
+			}else if( strcmp(lexer->YYText(),"EXIT" ) == 0){
+				#ifdef DEBUG
+					cout << "# EXIT STATEMENT" << endl ;
+				#endif
+				cout << "\tint $0x80\t# Interupte prog" << endl;
+				Statement();
 			} else {
 			Error("Not code yet");
 			}
@@ -382,8 +412,35 @@ void Statement(void){
 	}
 }
 
+
+// DISPLAY <Expression>
+void DisplayStatement(void){
+	unsigned long long tag=TagNumber++;
+	#ifdef DEBUG
+		cout << "# ----------- In DisplayStatement(void) -----------" << endl;
+	#endif
+	current = (TOKEN) lexer->yylex();
+
+	if(current == STRINGCONST){
+		Error("Cant dispay const string for now :)");
+	} else { // can be only a int for now
+		#ifdef DEBUG
+			cout << "# OTHER" << endl;
+		#endif
+		Expression();
+		cout << "\tpop %rdx                     # The value to be displayed" << endl;
+		cout << "\tmovq $FormatString1, %rsi    # \"%llu\\n\"" << endl;
+		cout << "\tmovl    $1, %edi" << endl;
+		cout << "\tmovl    $0, %eax" << endl;
+		cout << "\tcall    __printf_chk@PLT" << endl;
+		cout << "\tint $0x80\t# Interupte prog" << endl;
+	}
+}
+
+
 // WHILE <Expression> DO <Statement> 	
 void WhileStatement(void){
+	TYPE expType;
 	#ifdef DEBUG
 		cout << "# ----------- WhileStatement(void) -----------" << endl;
 	#endif
@@ -392,7 +449,10 @@ void WhileStatement(void){
 	cout << "While" << tag << ":" << endl;
 
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
-		Expression();
+		expType = Expression();
+		if(expType != BOOLEAN){
+			Error("Boolean expression needed !");
+		}
 	} else {
 		Error("Expression needed ! `WHILE <Expression> DO <Statement>.`");
 	}
@@ -496,11 +556,19 @@ void BlockStatement(void){
 
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
+	TYPE expType;
 	unsigned long long tag=TagNumber++; // For unique name in asm program
-	current = (TOKEN) lexer->yylex(); // Get and cast next word
-
+	//current = (TOKEN) lexer->yylex(); // Get and cast next word
+	if(current != KEYWORD || strcmp(lexer->YYText(),"IF")  !=  0){
+		Error("In void IfStatement(void) without if");
+	}else{
+		current = (TOKEN) lexer->yylex();
+	}
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
-		Expression();
+		expType = Expression();
+		if(expType != BOOLEAN){
+			Error("Boolean expression needed !");
+		}
 	} else {
 		Error("Une exp était attendu");
 	}
@@ -526,6 +594,7 @@ void IfStatement(void){
 		Statement();
 	}
 	cout << "Next" << tag << ":" << endl;
+	
 }
 
 // StatementPart := Statement {";" Statement} "."
@@ -546,8 +615,7 @@ void StatementPart(void){
 
 // Program := [DeclarationPart] StatementPart
 void Program(void){
-	if(current == RBRACKET)
-		DeclarationPart();
+	DeclarationPart();
 	StatementPart();	
 }
 
