@@ -28,7 +28,8 @@
 
 using namespace std;
 
-//#define DEBUG // if define the asm wil be have a lot of useless com
+
+#define DEBUG // if define the asm wil be have a lot of useless com
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -193,6 +194,9 @@ OPADD AdditiveOperator(void){
 
 // SimpleExpression := Term {AdditiveOperator Term}
 TYPE SimpleExpression(void){
+	#ifdef DEBUG
+		cout << endl << "# IN void SimpleExpression(void)" << endl;
+	#endif
 	TYPE firstTerm, secondTerm;
 	OPADD adop;
 	firstTerm = Term();
@@ -225,7 +229,7 @@ TYPE SimpleExpression(void){
 // DeclarationPart := "[" Ident {"," Ident} "]"
 void DeclarationPart(void){
 	cout  <<  "\t.data" << endl;
-	cout << "\tFormatString:\t.string \"\\n\"  # string to DISPLAY :" << endl;
+	cout << "FormatString:    .string \"%c\"" << endl;
 	cout << "FormatString1:    .string \"%llu\\n\"" << endl;
 	if(current == RBRACKET){
 		#ifdef DEBUG
@@ -394,6 +398,8 @@ void Statement(void){
 				#ifdef DEBUG
 					cout << "# EXIT STATEMENT" << endl ;
 				#endif
+				cout << "\tmovl $1, %eax  # System call number 1: exit()" << endl;
+    			cout << "\tmovl $0, %ebx  # Exits with exit status 0 " << endl;
 				cout << "\tint $0x80\t# Interupte prog" << endl;
 				Statement();
 			} else {
@@ -422,7 +428,26 @@ void DisplayStatement(void){
 	current = (TOKEN) lexer->yylex();
 
 	if(current == STRINGCONST){
-		Error("Cant dispay const string for now :)");
+		//cout << "\t.string " << lexer->YYText() << endl;
+		//cout << "\tmov .string " << lexer->YYText() <<", FormatString                     # The value to be displayed" << endl;
+		string currentWord = lexer->YYText();
+		#ifdef DEBUG
+			cout << "# WORD ==> " << currentWord << endl;
+		#endif
+		currentWord.erase(0, 1); // erase the first "
+		currentWord.erase(currentWord.size() - 1 ); // erase the " of the end
+		cout << "# PRINT STRING : " << currentWord << endl;
+		for(char& c : currentWord) {		
+			cout << "\tmovb $'" << c << "', %al"<<endl;
+			cout << "\tpush %rax"<<endl;
+			cout << "\tpop %rsi\t"<<endl;
+			cout << "\tmovq $FormatString, %rdi\t# \"%c\\n\""<<endl;
+			cout << "\tmovl	$0, %eax"<<endl;
+			cout << "\tcall	printf@PLT"<<endl;
+		}
+
+		// cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
+		current = (TOKEN) lexer->yylex();
 	} else { // can be only a int for now
 		#ifdef DEBUG
 			cout << "# OTHER" << endl;
@@ -433,7 +458,7 @@ void DisplayStatement(void){
 		cout << "\tmovl    $1, %edi" << endl;
 		cout << "\tmovl    $0, %eax" << endl;
 		cout << "\tcall    __printf_chk@PLT" << endl;
-		cout << "\tint $0x80\t# Interupte prog" << endl;
+		 // cout << "\tint $0x80" << endl; // usless avec print f
 	}
 }
 
