@@ -599,7 +599,7 @@ void IfStatement(void){
 	}
 	cout << "\tpop %rax\t# Get the result of expression" << endl;
 	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
-	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if la comparaison est fausse" << endl;
+	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if false" << endl;
 	
 	#ifdef DEBUG
 		cout << "# WORD ==> " << lexer->YYText() << endl;
@@ -611,15 +611,27 @@ void IfStatement(void){
 	current=(TOKEN) lexer->yylex();
 	Statement();
 
-	cout << "\tjmp Next" << tag << "\t# Si le if est fais on skip le else" << endl;
-	cout << "Else" << tag << ":" << endl;
-	current=(TOKEN) lexer->yylex();
-	if( current == KEYWORD || strcmp(lexer->YYText(),"ELSE" ) == 0){
+	cout << "\tje Next" << tag << "\t# if true skip else" << endl;
+	//current=(TOKEN) lexer->yylex();
+	if( current == KEYWORD && strcmp(lexer->YYText(),"ELSE" ) == 0){
+		current=(TOKEN) lexer->yylex();
+		#ifdef DEBUG
+			cout << "# ELSE" << endl;
+		#endif
+		cout << "Else" << tag << ":" << endl;
 		current=(TOKEN) lexer->yylex();
 		Statement();
+	} else if(current == KEYWORD && strcmp(lexer->YYText(),"END" ) == 0){
+		#ifdef DEBUG
+			cout << "# END" << endl;
+		#endif
+		current=(TOKEN) lexer->yylex();
+		cout << "Else" << tag << ":" << endl;
+		cout << "\tjmp Next" << tag << "\t# no else jmp to Next" << endl;
+		cout << "Next" << tag << ":" << endl;
+	} else {
+		Error("ELSE or END missing !");
 	}
-	cout << "Next" << tag << ":" << endl;
-	
 }
 
 // StatementPart := Statement {";" Statement} "."

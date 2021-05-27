@@ -1,4 +1,6 @@
 [a]
 a := 3;
 IF (a < 6) THEN
-DISPLAY "Welcome in PASCAL-LIKE programe".
+DISPLAY "Welcome in PASCAL-LIKE programe "
+END;
+DISPLAY a+2.
