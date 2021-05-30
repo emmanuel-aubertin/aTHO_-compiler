@@ -16,17 +16,15 @@ compilateur:	compilateur.cpp tokeniser.o
 	@echo "\e[32m--------| \e[1;32mCompilation of compilateur.cpp\e[0m\e[32m |--------\e[0m"
 	g++ -ggdb -o compilateur compilateur.cpp tokeniser.o
 	@echo "\e[32m\tDONE\e[0m\n"
-pToBin:		compilateur test.p
+test:		compilateur test.p
 	@echo "\e[32m--------| \e[1mTest of compilateur\e[0m\e[32m |--------\e[0m"
 	./compilateur <test.p >test.s  # Usage : ./compilateur <input.p >output.s
 	gcc  -ggdb -no-pie -fno-pie test.s -o test
 	@echo "\e[32m\tDONE\e[0m\n"
 
-test:		pToBin test.s
-	@echo "\e[32m--------| \e[1mExecution of the Binary\e[0m\e[32m |--------\e[0m"
-	./test
-	@echo "\e[32m\tDONE\e[0m"
 install:
 	@echo "\e[32m--------| \e[1mInstallation of dep\e[0m\e[32m |--------\e[0m"
 	sudo apt install flex flexc++ libfl-dev gcc g++
 	@echo "\e[32m\tDONE\e[0m"
+
+.PHONY: all test
