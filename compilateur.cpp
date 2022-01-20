@@ -1,22 +1,9 @@
-//  A compiler from a very simple Pascal-like structured language LL(k)
-//  to 64-bit 80x86 Assembly langage
-//  Copyright (C) 2019 Pierre Jourlin
-//
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//  
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-// Build with "make compilateur"
-
+/***************************************************************************************/
+/*----- Auteur :        Aubertin Emmanuel               |  For: arg parser in cpp   ****/
+/*----- Description :   A compiler from a very simple Pascal-like structured 		****/
+/*-----					language LL(k) to 64-bit 80x86 Assembly langage        		****/
+/*----- Contact :       https://athomisos.fr                                        ****/
+/***************************************************************************************/
 
 #include <string>
 #include <iostream>
@@ -25,11 +12,23 @@
 #include <FlexLexer.h>
 #include "tokeniser.h"
 #include <cstring>
+#include <fstream>
+
+
+std::string PROGNAME="aTHO_ Compiler";
+std::string FILE_NAME= __FILE__;
+std::string RELEASE="Revision 1.0 | Last update 23 jan 2022";
+std::string AUTHOR="Aubertin Emmanuel";
+std::string COPYRIGHT="(c) 2021 "+ AUTHOR + " from https://athomisos.fr";
+
+void print_release() {
+    std::cout << RELEASE << COPYRIGHT << std::endl;
+}
 
 using namespace std;
 
 
-#define DEBUG // if define the asm wil be have a lot of useless com
+//#define DEBUG // if define the asm wil be have a lot of useless com
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -45,8 +44,12 @@ void DisplayStatement(void);
 TYPE Expression(void);
 //VARTYPE Number(void);
 
-TOKEN current;				// Current token
+int strcounter = 0;
+string OutDeclarationPart;
+string OutStatementPart;
 
+
+TOKEN current;				// Current token
 
 FlexLexer* lexer = new yyFlexLexer; // This is the flex tokeniser
 // tokens can be read using lexer->yylex()
@@ -88,13 +91,15 @@ void Error(string s){
 	
 		
 TYPE Identifier(void){
-	cout  <<  "\tpush " << lexer->YYText() << endl;
+	OutStatementPart +=   "\tpush ";
+	OutStatementPart += lexer->YYText();
+	OutStatementPart += "\n";
 	current=(TOKEN) lexer->yylex();
 	return INTEGER;
 }
 
 TYPE Number(void){
-	cout  << "\tpush $" << atoi(lexer->YYText()) << endl;
+	OutStatementPart +=  "\tpush $" + to_string(atoi(lexer->YYText())) + "\n";
 	current=(TOKEN) lexer->yylex();
 	return INTEGER;
 }
@@ -150,26 +155,26 @@ TYPE Term(void){
 		if(firstFactor != secondFactor){ // If not same type
 			Error("Type non compatible !");
 		}
-		cout  <<  "\tpop %rbx" << endl;	// get first operand
-		cout  <<  "\tpop %rax" << endl;	// get second operand
+		OutStatementPart +=  "\tpop %rbx\n\
+		\tpop %rax\n";	// get second operand
 		switch(mulop){
 			case AND:
-				cout  <<  "\tmulq	%rbx" << endl;	// a * b -> %rdx:%rax
-				cout  <<  "\tpush %rax\t# AND" << endl;	// store result
+				OutStatementPart +=  "\tmulq	%rbx\n\
+				\tpush %rax\t# AND\n";	// store result
 				break;
 			case MUL:
-				cout  <<  "\tmulq	%rbx" << endl;	// a * b -> %rdx:%rax
-				cout  <<  "\tpush %rax\t# MUL" << endl;	// store result
+				OutStatementPart +=  "\tmulq	%rbx\n\
+				\tpush %rax\t# MUL\n";	// store result
 				break;
 			case DIV:
-				cout  <<  "\tmovq $0, %rdx" << endl; 	// Higher part of numerator  
-				cout  <<  "\tdiv %rbx" << endl;			// quotient goes to %rax
-				cout  <<  "\tpush %rax\t# DIV" << endl;		// store result
+				OutStatementPart +=  "\tmovq $0, %rdx\n\
+				\tdiv %rbx\n\
+				\tpush %rax\t# DIV\n";		// store result
 				break;
 			case MOD:
-				cout  <<  "\tmovq $0, %rdx" << endl; 	// Higher part of numerator  
-				cout  <<  "\tdiv %rbx" << endl;			// remainder goes to %rdx
-				cout  <<  "\tpush %rdx\t# MOD" << endl;		// store result
+				OutStatementPart +=  "\tmovq $0, %rdx\n\
+				\tdiv %rbx\n\
+				\tpush %rdx\t# MOD\n";		// store result
 				break;
 			default:
 				Error("opérateur multiplicatif attendu");
@@ -206,48 +211,50 @@ TYPE SimpleExpression(void){
 		if(firstTerm != secondTerm){// If not same type
 			Error("Type non compatible !");
 		}
-		cout  <<  "\tpop %rbx" << endl;	// get first operand
-		cout  <<  "\tpop %rax" << endl;	// get second operand
+		OutStatementPart +=  "\tpop %rbx\n\
+		\tpop %rax\n";	// get second operand
 		switch(adop){
 			case OR:
-				cout  <<  "\taddq	%rbx, %rax\t# OR" << endl;// operand1 OR operand2
+				OutStatementPart += "\taddq	%rbx, %rax\t# OR\n";// operand1 OR operand2
 				break;			
 			case ADD:
-				cout  <<  "\taddq	%rbx, %rax\t# ADD" << endl;	// add both operands
+				OutStatementPart += "\taddq	%rbx, %rax\t# ADD\n";	// add both operands
 				break;			
 			case SUB:	
-				cout  <<  "\tsubq	%rbx, %rax\t# SUB" << endl;	// substract both operands
+				OutStatementPart +="\tsubq	%rbx, %rax\t# SUB\n";	// substract both operands
 				break;
 			default:
 				Error("opérateur additif inconnu");
 		}
-		cout  <<  "\tpush %rax" << endl;			// store result
+		OutStatementPart += "\tpush %rax\n";			// store result
 	}
 	return firstTerm;
 }
 
 // DeclarationPart := "[" Ident {"," Ident} "]"
 void DeclarationPart(void){
-	cout  <<  "\t.data" << endl;
-	cout << "FormatString:    .string \"%c\"" << endl;
-	cout << "FormatString1:    .string \"%llu\\n\"" << endl;
+	OutDeclarationPart +=  "\t.data\n\
+	FormatString:    .string \"%c\"\n\
+	FormatString1:    .string \"%llu\\n\"\n";
 	if(current == RBRACKET){
 		#ifdef DEBUG
 			cout << "# IN [" << endl;
 		#endif
-		cout  <<  "\t.align 8" << endl;
+		OutDeclarationPart += "\t.align 8\n";
 		
 		current=(TOKEN) lexer->yylex();
 		if(current != ID)
 			Error("Un identificater était attendu");
-		cout  <<  lexer->YYText()  <<  ":\t.quad 0" << endl;
+		OutDeclarationPart +=   lexer->YYText();
+		OutDeclarationPart +=   ":\t.quad 0\n";
 		DeclaredVariables.insert(lexer->YYText());
 		current=(TOKEN) lexer->yylex();
 		while(current == COMMA){
 			current=(TOKEN) lexer->yylex();
 			if(current != ID)
 				Error("Un identificateur était attendu");
-			cout  <<  lexer->YYText()  <<  ":\t.quad 0" << endl;
+			OutDeclarationPart +=   lexer->YYText();
+			OutDeclarationPart +=   ":\t.quad 0\n";
 			DeclaredVariables.insert(lexer->YYText());
 			current=(TOKEN) lexer->yylex();
 		}
@@ -290,35 +297,36 @@ TYPE Expression(void){
 		if(firstPart != secondPart){ // If not same type
 			Error("Type non compatible !");
 		}
-		cout  <<  "\tpop %rax" << endl;
-		cout  <<  "\tpop %rbx" << endl;
-		cout  <<  "\tcmpq %rax, %rbx" << endl;
+		OutStatementPart += "\tpop %rax\n\
+		\tpop %rbx\n\
+		\tcmpq %rax, %rbx\n";
+
 		switch(oprel){
 			case EQU:
-				cout  <<  "\tje Vrai" << ++TagNumber << "\t# If equal" << endl;
+				OutStatementPart += "\tje Vrai" + to_string(++TagNumber) + "\t# If equal\n";
 				break;
 			case DIFF:
-				cout  <<  "\tjne Vrai" << ++TagNumber << "\t# If different" << endl;
+				OutStatementPart += "\tjne Vrai" + to_string(++TagNumber) + "\t# If different\n";
 				break;
 			case SUPE:
-				cout  <<  "\tjae Vrai" << ++TagNumber << "\t# If above or equal" << endl;
+				OutStatementPart += "\tjae Vrai" + to_string(++TagNumber) + "\t# If above or equal\n";
 				break;
 			case INFE:
-				cout  <<  "\tjbe Vrai" << ++TagNumber << "\t# If below or equal" << endl;
+				OutStatementPart += "\tjbe Vrai" + to_string(++TagNumber) + "\t# If below or equal\n";
 				break;
 			case INF:
-				cout  <<  "\tjb Vrai" << ++TagNumber << "\t# If below" << endl;
+				OutStatementPart += "\tjb Vrai" + to_string(++TagNumber) + "\t# If below\n";
 				break;
 			case SUP:
-				cout  <<  "\tja Vrai" << ++TagNumber << "\t# If above" << endl;
+				OutStatementPart += "\tja Vrai" + to_string(++TagNumber) + "\t# If above\n";
 				break;
 			default:
 				Error("Opérateur de comparaison inconnu");
 		}
-		cout  <<  "\tpush $0\t\t# False" << endl;
-		cout  <<  "\tjmp Suite" << TagNumber << endl;
-		cout  <<  "Vrai" << TagNumber << ":\tpush $0xFFFFFFFFFFFFFFFF\t\t# True" << endl;	
-		cout  <<  "Suite" << TagNumber << ":" << endl;
+		OutStatementPart += "\tpush $0\t\t# False\n\
+		\tjmp Suite" + to_string(TagNumber) + "\n\
+		Vrai" + to_string(TagNumber) + ":\tpush $0xFFFFFFFFFFFFFFFF\t\t# True\n\	
+		Suite" + to_string(TagNumber) + ":\n";
 	}
 	return BOOLEAN;
 }
@@ -338,7 +346,7 @@ void AssignementStatement(void){
 		Error("caractères ':=' attendus");
 	current=(TOKEN) lexer->yylex();
 	Expression();
-	cout  <<  "\tpop " << variable << endl;
+	OutStatementPart +=  "\tpop " + variable +"\n";
 }
 
 // Statement := AssignementStatement
@@ -398,9 +406,9 @@ void Statement(void){
 				#ifdef DEBUG
 					cout << "# EXIT STATEMENT" << endl ;
 				#endif
-				cout << "\tmovl $1, %eax  # System call number 1: exit()" << endl;
-    			cout << "\tmovl $0, %ebx  # Exits with exit status 0 " << endl;
-				cout << "\tint $0x80\t# Interupte prog" << endl;
+				OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\
+    			\tmovl $0, %ebx  # Exits with exit status 0\n\
+				\tint $0x80\t# Interupte prog\n";
 				Statement();
 			} else {
 			Error("Not code yet");
@@ -431,34 +439,34 @@ void DisplayStatement(void){
 		//cout << "\t.string " << lexer->YYText() << endl;
 		//cout << "\tmov .string " << lexer->YYText() <<", FormatString                     # The value to be displayed" << endl;
 		string currentWord = lexer->YYText();
+		int len = currentWord.length();
 		#ifdef DEBUG
 			cout << "# WORD ==> " << currentWord << endl;
 		#endif
 		currentWord.erase(0, 1); // erase the first "
 		currentWord.erase(currentWord.size() - 1 ); // erase the " of the end
-		cout << "# PRINT STRING : " << currentWord << endl;
-		for(char& c : currentWord) {		
-			cout << "\tmovb $'" << c << "', %al"<<endl;
-			cout << "\tpush %rax"<<endl;
-			cout << "\tpop %rsi\t"<<endl;
-			cout << "\tmovq $FormatString, %rdi\t# \"%c\\n\""<<endl;
-			cout << "\tmovl	$0, %eax"<<endl;
-			cout << "\tcall	printf@PLT"<<endl;
-		}
+		OutDeclarationPart += "STR" + to_string(TagNumber) + ":";
+		OutDeclarationPart += "\t.string \"" + currentWord + "\"\n";
+		/*OutDeclarationPart += "len" + to_string(TagNumber) + ":\n\tpush $" + to_string(len) + ", len";*/
+
+		OutStatementPart += "\tmovl $4, %eax # sys_write\n\
+\tmovl $1, %ebx # write to file descriptor 1 (stdout)\n\
+\tmovl $STR" + to_string(TagNumber) + ", %ecx # pointer to the string to print\n\
+\tmovl $" + to_string(len) + ", %edx # asks to print 5 characters our of the string passed in %ecx\n\
+\tint $0x80 # call the system call";
 
 		// cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
 		current = (TOKEN) lexer->yylex();
-	} else { // can be only a int for now
+	} else { // can be only a int for nowS
 		#ifdef DEBUG
 			cout << "# OTHER" << endl;
 		#endif
 		Expression();
-		cout << "\tpop %rdx                     # The value to be displayed" << endl;
-		cout << "\tmovq $FormatString1, %rsi    # \"%llu\\n\"" << endl;
-		cout << "\tmovl    $1, %edi" << endl;
-		cout << "\tmovl    $0, %eax" << endl;
-		cout << "\tcall    __printf_chk@PLT" << endl;
-		 // cout << "\tint $0x80" << endl; // usless avec print f
+		OutStatementPart += "\tpop %rdx                     # The value to be displayed\n\
+		\tmovq $FormatString1, %rsi    # \"%llu\\n\" \n\
+		\tmovl    $1, %edi \n\
+		\tmovl    $0, %eax \n\
+		\tcall    __printf_chk@PLT \n";
 	}
 }
 
@@ -471,7 +479,7 @@ void WhileStatement(void){
 	#endif
 	unsigned long long tag=TagNumber++;
 	current = (TOKEN) lexer->yylex();
-	cout << "While" << tag << ":" << endl;
+	OutDeclarationPart += "While" + to_string(tag) + ":\n";
 
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
 		expType = Expression();
@@ -482,17 +490,17 @@ void WhileStatement(void){
 		Error("Expression needed ! `WHILE <Expression> DO <Statement>.`");
 	}
 
-	cout << "\tpop %rax" << endl;
-	cout << "\tcmp $0, %rax" << endl;
-	cout << "\tje EndWhile" << tag <<endl;
+	OutDeclarationPart +=  "\tpop %rax \n\
+	\tcmp $0, %rax\n\
+	\tje EndWhile" + to_string(tag) + "\n";
 	if(current == KEYWORD && strcmp(lexer->YYText(),"DO")  ==  0){
 		current = (TOKEN) lexer->yylex();
 		BlockStatement();
 	} else {
 		Error("DO missing !");
 	}
-	cout << "jmp While" << tag << endl;
-	cout << "EndWhile" << tag << ":" << endl;
+	OutDeclarationPart += "jmp While" + to_string(tag) + "\n\
+	EndWhile" + to_string(tag) + ":\n";
 }
 
 
@@ -509,19 +517,23 @@ void ForStatement(void){
 	#endif
 	
 	if( current == NUMBER){
-		cout << "movq $" << lexer->YYText() << ", %rcx # Get Start value" << endl;
+		OutDeclarationPart += "movq $" ;
+		OutDeclarationPart +=  lexer->YYText(); 
+		OutDeclarationPart += ", %rcx # Get Start value\n";
 		current = (TOKEN) lexer->yylex();
 	} else {
 		Error("Need Digit");
 	}
 
-	cout << "For" << tag << ":" << endl;
-	cout << "\taddq	$1, %rcx \t# OR" << endl;
+	OutDeclarationPart +="For" + to_string(tag) + ":\n\
+	\taddq	$1, %rcx \t# OR\n";
 
 	if( current == KEYWORD || strcmp(lexer->YYText(), "To") == 0){
 		current = (TOKEN) lexer->yylex(); // Get digit after To
-		cout << "\tcmp $" << lexer->YYText() << ", %rcx # To KEYWORD" << endl;
-		cout << "\tjae EndFor"<< tag << endl;
+		OutDeclarationPart +=  "\tcmp $";
+		OutDeclarationPart +=  lexer->YYText();
+		OutDeclarationPart += ", %rcx # To KEYWORD\n\
+		\tjae EndFor"+ to_string(tag) + "\n";
 		current = (TOKEN) lexer->yylex(); // Get Do
 	} else {
 		Error("To requiered");
@@ -533,8 +545,8 @@ void ForStatement(void){
 	} else {
 		Error("DO requiered");
 	}
-	cout << "\tjmp For" << tag << endl;
-	cout << "EndFor" << tag << ":" << endl;
+	OutDeclarationPart += "\tjmp For" + to_string(tag) + "\n\
+	EndFor" + to_string(tag) + ":\n";
 }
 
 // "BEGIN" Statement { ";" Statement } "END"
@@ -597,9 +609,9 @@ void IfStatement(void){
 	} else {
 		Error("Une exp était attendu");
 	}
-	cout << "\tpop %rax\t# Get the result of expression" << endl;
+	OutStatementPart += "\tpop %rax\t# Get the result of expression\n";
 	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
-	cout << "\tje Else" << tag << "\t# jmp à Else" << tag << " if false" << endl;
+	OutStatementPart += "\tje Else" + to_string(tag) + "\t# jmp à Else" + to_string(tag) + " if false\n";
 	
 	#ifdef DEBUG
 		cout << "# WORD ==> " << lexer->YYText() << endl;
@@ -611,14 +623,14 @@ void IfStatement(void){
 	current=(TOKEN) lexer->yylex();
 	Statement();
 
-	cout << "\tje Next" << tag << "\t# if true skip else" << endl;
+	OutStatementPart += "\tje Next" + to_string(tag) + "\t# if true skip else\n";
 	//current=(TOKEN) lexer->yylex();
 	if( current == KEYWORD && strcmp(lexer->YYText(),"ELSE" ) == 0){
 		current=(TOKEN) lexer->yylex();
 		#ifdef DEBUG
 			cout << "# ELSE" << endl;
 		#endif
-		cout << "Else" << tag << ":" << endl;
+		OutStatementPart += "Else"  + to_string(tag) + ":\n";
 		current=(TOKEN) lexer->yylex();
 		Statement();
 	} else if(current == KEYWORD && strcmp(lexer->YYText(),"END" ) == 0){
@@ -626,9 +638,9 @@ void IfStatement(void){
 			cout << "# END" << endl;
 		#endif
 		current=(TOKEN) lexer->yylex();
-		cout << "Else" << tag << ":" << endl;
-		cout << "\tjmp Next" << tag << "\t# no else jmp to Next" << endl;
-		cout << "Next" << tag << ":" << endl;
+		OutStatementPart += "Else" + to_string(tag) + ":\n\
+		\tjmp Next" + to_string(tag) + "\t# no else jmp to Next\n\
+		Next" + to_string(tag) + ":\n";
 	} else {
 		Error("ELSE or END missing !");
 	}
@@ -636,10 +648,10 @@ void IfStatement(void){
 
 // StatementPart := Statement {";" Statement} "."
 void StatementPart(void){
-	cout  <<  "\t.text\t\t# The following lines contain the program" << endl;
-	cout  <<  "\t.globl main\t# The main function must be visible from outside" << endl;
-	cout  <<  "main:\t\t\t# The main function body :" << endl;
-	cout  <<  "\tmovq %rsp, %rbp\t# Save the position of the stack's top" << endl;
+	OutStatementPart += "\t.text\t\t# The following lines contain the program\n\
+	\t.globl main\t# The main function must be visible from outside\n\
+	main:\t\t\t# The main function body :\n\
+	\tmovq %rsp, %rbp\t# Save the position of the stack's top\n";
 	Statement();
 	while(current == SEMICOLON){
 		current=(TOKEN) lexer->yylex();
@@ -656,13 +668,17 @@ void Program(void){
 	StatementPart();	
 }
 
-int main(void){	// First version : Source code on standard input and assembly code on standard output
+int main(int argc,char** argv){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
-	cout  <<  "\t\t\t# This code was produced by the aTHO Compiler" << endl;
-	cout  <<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;
+	cout  	<<  "\t\t\t# This code was produced by the " << PROGNAME << endl;
+	cout	<<	"\t\t\t# "; print_release();
+	cout  	<<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;
 	// Let's proceed to the analysis and code production
-	current=(TOKEN) lexer->yylex();
+	current = (TOKEN) lexer->yylex(); // save current token
+
 	Program();
+	cout << "# ----------------- DeclarationPart ----------------- #" << endl << OutDeclarationPart << 
+	"# ----------------- StatementPart ----------------- #" << endl << OutStatementPart << endl;
 	// Trailer for the gcc assembler / linker
 	cout  <<  "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top" << endl;
 	cout  <<  "\tret\t\t\t# Return from main function" << endl;
