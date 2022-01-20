@@ -2,5 +2,5 @@ compilateur
 tokeniser.cpp
 tokeniser.o
 test.s
-test
+test*
 .vscode/
