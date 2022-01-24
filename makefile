@@ -16,9 +16,9 @@ compilateur:	compilateur.cpp tokeniser.o
 	@echo "\e[32m--------| \e[1;32mCompilation of compilateur.cpp\e[0m\e[32m |--------\e[0m"
 	g++ -ggdb -o compilateur compilateur.cpp tokeniser.o
 	@echo "\e[32m\tDONE\e[0m\n"
-test:		compilateur input.p
+test:		compilateur input.aTHO
 	@echo "\e[32m--------| \e[1mTest of compilateur\e[0m\e[32m |--------\e[0m"
-	./compilateur <input.p >output.s  # Usage : ./compilateur <input.p >output.s
+	./compilateur <input.aTHO >output.s  # Usage : ./compilateur <input.aTHO >output.s
 	gcc  -ggdb -no-pie -fno-pie output.s -o test.bin
 	@echo "\e[32m\tDONE\e[0m\n"
 

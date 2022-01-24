@@ -1,0 +1,12 @@
+[a]
+
+a := 0;
+
+FOR 0 To 4 DO
+    a := 3 + a;
+    DISPLAY "a = ";
+    DISPLAY a;
+    DISPLAY "\tIN FOR\n";
+END;
+
+DISPLAY "Goodbye\n".
