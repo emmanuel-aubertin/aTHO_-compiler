@@ -29,7 +29,6 @@ END;
 
 DISPLAY "IF statement test : \033[1m[OK]\033[0m\n";
 
-/* Currently working on the while statement :)
 DISPLAY "WHILE statement test :\n";
 i :=0;
 DISPLAY "\ti start at  ";
@@ -40,6 +39,6 @@ WHILE (i < 4) DO
     DISPLAY i;
 END;
 DISPLAY "WHILE statement test : \033[1m[OK]\033[0m\n";
-*/
+
 
 DISPLAY "\033[1mGoodbye\033[0m\n".

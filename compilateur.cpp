@@ -540,7 +540,7 @@ void DisplayStatement(void){
 \tmovl $1, %ebx # write to file descriptor 1 (stdout)\n\
 \tmovl $STR" + to_string(TagNumber) + ", %ecx # pointer to the string to print\n\
 \tmovl $" + to_string(len) + ", %edx # asks to print " + to_string(len) + " characters our of the string passed in %ecx\n\
-\tint $0x80 # call the system call";
+\tint $0x80 # call the system call\n";
 
 		// std::cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
 		current = (TOKEN) lexer->yylex();
@@ -567,7 +567,7 @@ void WhileStatement(void){
 	#endif
 	unsigned long long tag=++TagNumber;
 	current = (TOKEN) lexer->yylex();
-	OutStatementPart += "While" + to_string(tag) + ":\n";
+	OutStatementPart += "while" + to_string(tag) + ":\n";
 
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
 		expType = Expression();
@@ -578,16 +578,14 @@ void WhileStatement(void){
 		Error("Expression needed ! `WHILE <Expression> DO <Statement>.`");
 	}
 
-	OutStatementPart +=  "\tpop %rax \n\
-\tcmp $0, %rax\n\
-\tje EndWhile" + to_string(tag) + "\n";
+	OutStatementPart +=  "\tjmp EndWhile" + to_string(tag) + "\nVrai" + to_string(tag)+":\n";
 	if(current == KEYWORD && strcmp(lexer->YYText(),"DO")  ==  0){
 		current = (TOKEN) lexer->yylex();
 		BlockStatement();
 	} else {
 		Error("DO missing !");
 	}
-	OutStatementPart += "jmp While" + to_string(tag) + "\n\
+	OutStatementPart += "jmp while" + to_string(tag) + "\n\
 EndWhile" + to_string(tag) + ":\n";
 }
 
