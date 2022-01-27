@@ -25,9 +25,4 @@ Compilation:
   script:
     - ./compilateur <input.aTHO >test.s
     - gcc  -ggdb -no-pie -fno-pie test.s -o test.bin
-    
-Test: 
-  stage: test
-  needs: ["Compilation", "build"]
-  script:
     - ./test.bin
