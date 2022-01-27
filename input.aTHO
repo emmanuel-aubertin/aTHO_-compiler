@@ -3,10 +3,13 @@
 a := 0;
 
 FOR 0 To 4 DO
-    a := 3 + a;
-    DISPLAY "a = ";
-    DISPLAY a;
-    DISPLAY "\tIN FOR\n";
+    DISPLAY "IN FOR\n";
+    FOR 0 To 2 DO
+        a := 1 + a
+        DISPLAY "\ta = ";
+        DISPLAY a;
+        DISPLAY "\tIN FOR\n";
+    END;
 END;
 
 DISPLAY "Goodbye\n".

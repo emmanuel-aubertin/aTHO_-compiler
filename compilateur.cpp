@@ -573,7 +573,10 @@ void ForStatement(void){
 		Error("DO requiered");
 	}
 	OutStatementPart += "\n\tjmp For" + to_string(tag) + "\n\
-EndFor" + to_string(tag) + ":\n";
+EndFor" + to_string(tag) + ":\n\
+\tpush $0\n\
+\tpop i" + to_string(tag);
+
 	#ifdef DEBUG
 		cout << "# End of for" << lexer->YYText() << endl;
 		OutStatementPart += "\n# End of for\n\n\n";
@@ -608,7 +611,7 @@ void BlockStatement(void){
 			#endif
 			current = (TOKEN) lexer->yylex();// skip the ;
 		} else {
-			Error(";");
+			//Error(";");
 		}
 	}
 	#ifdef DEBUG
