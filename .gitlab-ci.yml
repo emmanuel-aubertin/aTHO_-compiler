@@ -7,8 +7,8 @@
 
 image: gcc # https://hub.docker.com/_/gcc/
 
-build:
-  stage: build
+Build:
+  stage: Build
   script:
     - apt update && apt -y install make flex
     - make clean
@@ -19,9 +19,13 @@ build:
     paths:
       - compilateur
 
-test:
-  stage: test
+Compilation:
+  stage: Compilation
   script:
     - ./compilateur <input.aTHO >test.s
     - gcc  -ggdb -no-pie -fno-pie test.s -o test.bin
+
+BinTest:
+  stage: BinTest
+  script:
     - ./test.bin
