@@ -14,12 +14,17 @@ tokeniser.o:	tokeniser.cpp
 	@echo "\e[32m\tDONE\e[0m\n"
 compilateur:	compilateur.cpp tokeniser.o
 	@echo "\e[32m--------| \e[1;32mCompilation of compilateur.cpp\e[0m\e[32m |--------\e[0m"
-	g++ -ggdb -o compilateur compilateur.cpp tokeniser.o
+	g++ -ggdb -o aTHOlang compilateur.cpp tokeniser.o
 	@echo "\e[32m\tDONE\e[0m\n"
-test:		compilateur input.aTHO
+aTHOlang:		compilateur input.aTHO
 	@echo "\e[32m--------| \e[1mTest of compilateur\e[0m\e[32m |--------\e[0m"
-	./compilateur <input.aTHO >output.s  # Usage : ./compilateur <input.aTHO >output.s
+	./aTHOlang <input.aTHO >output.s  # Usage : ./aTHOlang <input.aTHO >output.s
 	gcc  -ggdb -no-pie -fno-pie output.s -o test.bin
+	@echo "\e[32m\tDONE\e[0m\n"
+
+test: aTHOlang test.bin
+	@echo "\e[32m--------| \e[1mTest of binary\e[0m\e[32m |--------\e[0m"
+	./test.bin
 	@echo "\e[32m\tDONE\e[0m\n"
 
 install:
