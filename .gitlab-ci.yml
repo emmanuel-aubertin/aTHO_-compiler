@@ -19,9 +19,13 @@ build:
     paths:
       - compilateur
 
-test:
+Compilation:
   stage: test
   script:
     - ./compilateur <input.aTHO >test.s
     - gcc  -ggdb -no-pie -fno-pie test.s -o test.bin
+    
+Test: 
+  stage: test
+  script:
     - ./test.bin
