@@ -23,4 +23,5 @@ test:
   stage: test
   script:
     - ./compilateur <input.aTHO >test.s
-    - gcc  -ggdb -no-pie -fno-pie test.s -o test
+    - gcc  -ggdb -no-pie -fno-pie test.s -o test.bin
+    - ./test.bin
