@@ -54,11 +54,11 @@ unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"\"WHILE
 
 <<EOF>>					return FEOF;
 {ws}    {/* skip blanks and tabs */};
-"(*"    { /* Skip comments between '(*' and '*)' */
+"/*"    { /* Skip comments between '(*' and '*)' */
 		int c;
 		while((c = yyinput()) != 0){
      			if(c == '*'){
-     	    			if((c = yyinput()) == ')')
+     	    			if((c = yyinput()) == '/')
     	        			break;
     	     			else
   	          			unput(c);

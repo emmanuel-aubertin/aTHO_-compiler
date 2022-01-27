@@ -5,6 +5,8 @@
 /*----- Contact :       https://athomisos.fr                                        ****/
 /***************************************************************************************/
 
+// SYSCALL => vim /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+
 #include <string>
 #include <iostream>
 #include <cstdlib>
@@ -13,6 +15,7 @@
 #include "tokeniser.h"
 #include <cstring>
 #include <fstream>
+#include <algorithm>
 
 
 std::string PROGNAME="aTHO_ Compiler";
@@ -27,8 +30,11 @@ void print_release() {
 
 using namespace std;
 
+//Enable All DEBUG mode
+#define DEBUG // if define the asm wil #be have a lot of useless com
 
-//#define DEBUG // if define the asm wil #be have a lot of useless com
+//DEBUG DISPLAY
+//#define DEBUGDISP
 
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
@@ -46,6 +52,8 @@ int getLength(string);
 //VARTYPE Number(void);
 
 int strcounter = 0;
+size_t tempPosition; // !! Need to be reset after all use
+string tempBlock;
 string OutDeclarationPart;
 string OutStatementPart;
 
@@ -64,7 +72,6 @@ unsigned long TagNumber=0;
 bool IsDeclared(const char *id){
 	return DeclaredVariables.find(id) != DeclaredVariables.end();
 }
-
 
 void Error(string s){
 	cerr  <<  "Ligne n°" << lexer->lineno() << ", lu : '" << lexer->YYText() << "'(" << current << "), mais ";
@@ -90,7 +97,6 @@ void Error(string s){
 // Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
 // Letter := "a"|...|"z"
 	
-		
 TYPE Identifier(void){
 	OutStatementPart += "\tpush ";
 	OutStatementPart += lexer->YYText();
@@ -201,7 +207,7 @@ OPADD AdditiveOperator(void){
 // SimpleExpression := Term {AdditiveOperator Term}
 TYPE SimpleExpression(void){
 	#ifdef DEBUG
-		cout << endl << "# IN void SimpleExpression(void)" << endl;
+		std::cout << endl << "# IN void SimpleExpression(void)" << endl;
 	#endif
 	TYPE firstTerm, secondTerm;
 	OPADD adop;
@@ -239,7 +245,7 @@ FormatString:    .string \"%c\"\n\
 FormatString1:    .string \"%llu\\n\"\n";
 	if(current == RBRACKET){
 		#ifdef DEBUG
-			cout << "# IN [" << endl;
+			std::cout << "# IN [" << endl;
 		#endif
 		OutDeclarationPart += "\t.align 8\n";
 		
@@ -264,12 +270,12 @@ FormatString1:    .string \"%llu\\n\"\n";
 	
 }
 
-// RelationalOperator := " == " | " != " | "<" | ">" | "<=" | ">="  
+// RelationalOperator := " = " | " != " | "<" | ">" | "<=" | ">="  
 OPREL RelationalOperator(void){
 	OPREL oprel;
-	if(strcmp(lexer->YYText()," = ") == 0)
+	if(strcmp(lexer->YYText(),"=") == 0)
 		oprel=EQU;
-	else if(strcmp(lexer->YYText()," != ") == 0)
+	else if(strcmp(lexer->YYText(),"!=") == 0)
 		oprel=DIFF;
 	else if(strcmp(lexer->YYText(),"<") == 0)
 		oprel=INF;
@@ -288,13 +294,22 @@ OPREL RelationalOperator(void){
 TYPE Expression(void){
 	TYPE firstPart, secondPart; 
 	#ifdef DEBUG
-		cout << endl << "# IN void Expression(void)" << endl;
+		std::cout << endl << "# -- Expression(void) --" << endl;
 	#endif
 	OPREL oprel;
 	firstPart = SimpleExpression();
+	#ifdef DEBUG
+		std::cout << "\t\t# First part ==>" << firstPart << endl;
+	#endif
 	if(current == RELOP){
 		oprel=RelationalOperator();
+		#ifdef DEBUG
+			std::cout << "\t\t# OP ==>" << oprel << endl;
+		#endif
 		secondPart = SimpleExpression();
+		#ifdef DEBUG
+			std::cout << "\t\t# Second part ==>" << firstPart << endl;
+		#endif
 		if(firstPart != secondPart){ // If not same type
 			Error("Type non compatible !");
 		}
@@ -304,32 +319,53 @@ TYPE Expression(void){
 
 		switch(oprel){
 			case EQU:
-				OutStatementPart += "\tje Vrai" + to_string(++TagNumber) + "\t# If equal\n";
+				#ifdef DEBUG
+					cout << "\t\t# EQU expression" << endl;
+				#endif
+				OutStatementPart += "\tje Vrai" + to_string(TagNumber) + "\t# If equal\n";
 				break;
 			case DIFF:
-				OutStatementPart += "\tjne Vrai" + to_string(++TagNumber) + "\t# If different\n";
+				#ifdef DEBUG
+					cout << "\t\t# DIFF expression" << endl;
+				#endif
+				OutStatementPart += "\tjne Vrai" + to_string(TagNumber) + "\t# If different\n";
 				break;
 			case SUPE:
-				OutStatementPart += "\tjae Vrai" + to_string(++TagNumber) + "\t# If above or equal\n";
+				#ifdef DEBUG
+					cout << "\t\t# SUPE expression" << endl;
+				#endif
+				OutStatementPart += "\tjae Vrai" + to_string(TagNumber) + "\t# If above or equal\n";
 				break;
 			case INFE:
-				OutStatementPart += "\tjbe Vrai" + to_string(++TagNumber) + "\t# If below or equal\n";
+				#ifdef DEBUG
+					cout << "\t\t# INFE expression" << endl;
+				#endif
+				OutStatementPart += "\tjbe Vrai" + to_string(TagNumber) + "\t# If below or equal\n";
 				break;
 			case INF:
-				OutStatementPart += "\tjb Vrai" + to_string(++TagNumber) + "\t# If below\n";
+				#ifdef DEBUG
+					cout << "\t\t# INF expression" << endl;
+				#endif
+				OutStatementPart += "\tjb Vrai" + to_string(TagNumber) + "\t# If below\n";
 				break;
 			case SUP:
-				OutStatementPart += "\tja Vrai" + to_string(++TagNumber) + "\t# If above\n";
+				#ifdef DEBUG
+					cout << "\t\t# SUP expression" << endl;
+				#endif
+				OutStatementPart += "\tja Vrai" + to_string(TagNumber) + "\t# If above\n";
 				break;
 			default:
 				Error("Opérateur de comparaison inconnu");
 		}
-		OutStatementPart += "\tpush $0\t\t# False\n\
-\tjmp Suite" + to_string(TagNumber) + "\n\
-Vrai" + to_string(TagNumber) + ":\tpush $0xFFFFFFFFFFFFFFFF\t\t# True\n\	
-Suite" + to_string(TagNumber) + ":\n";
+		tempPosition = OutStatementPart.length();
+		
+		//OutStatementPart += "REPLACE"+ to_string(++TagNumber);
 	}
+	#ifdef DEBUG
+		cout << "# End of Expression()" << endl;
+	#endif
 	return BOOLEAN;
+
 }
 
 // AssignementStatement := Identifier ":=" Expression
@@ -355,57 +391,57 @@ void Statement(void){
 	if(strcmp(lexer->YYText(),"" ) != 0){
 
 		#ifdef DEBUG
-			cout << "# ----------- In Statement(void) ----------- " << endl;
+			std::cout << "# ----------- In Statement(void) ----------- " << endl;
 		#endif
 
 		if((TOKEN) current == KEYWORD){
 			#ifdef DEBUG
-				cout << "# TOKEN == KEYWORD"<< endl;
+				std::cout << "# TOKEN == KEYWORD"<< endl;
 			#endif
 
 			if( strcmp(lexer->YYText(),"IF" ) == 0){
 				#ifdef DEBUG
-					cout << "# IF STATEMENT" << endl ;
+					std::cout << "# IF STATEMENT" << endl ;
 				#endif
 				IfStatement();
 			} else if( strcmp(lexer->YYText(),"THEN") == 0 || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
 				#ifdef DEBUG
-					cout << "# THEN or ELSE outside of IF" << endl ;
+					std::cout << "# THEN or ELSE outside of IF" << endl ;
 				#endif
 				Error("You need to be in a IF");
 			} else if( strcmp(lexer->YYText(),"WHILE" ) == 0){
 				#ifdef DEBUG
-					cout << "# WHILE STATEMENT" << endl ;
+					std::cout << "# WHILE STATEMENT" << endl ;
 				#endif
 				WhileStatement();
 			} else if( strcmp(lexer->YYText(),"FOR" ) == 0){
 				#ifdef DEBUG
-					cout << "# FOR STATEMENT" << endl ;
+					std::cout << "# FOR STATEMENT" << endl ;
 				#endif
 				ForStatement();
 			} else if( strcmp(lexer->YYText(),"BEGIN" ) == 0){
 				#ifdef DEBUG
-					cout << "# BLOCK STATEMENT" << endl ;
+					std::cout << "# BLOCK STATEMENT" << endl ;
 				#endif
 				BlockStatement(); 
 			} else if( strcmp(lexer->YYText(),"DO" ) == 0){
 				#ifdef DEBUG
-					cout << "# BLOCK STATEMENT" << endl ;
+					std::cout << "# BLOCK STATEMENT" << endl ;
 				#endif
 				BlockStatement(); 
 			} else if( strcmp(lexer->YYText(),"END" ) == 0){
 				#ifdef DEBUG
-					cout << "# END STATEMENT" << endl ;
+					std::cout << "# END STATEMENT" << endl ;
 				#endif
 				Statement();
 			}else if( strcmp(lexer->YYText(),"DISPLAY" ) == 0){
 				#ifdef DEBUG
-					cout << "# DISPLAY STATEMENT" << endl ;
+					std::cout << "# DISPLAY STATEMENT" << endl ;
 				#endif
 				DisplayStatement();
 			}else if( strcmp(lexer->YYText(),"EXIT" ) == 0){
 				#ifdef DEBUG
-					cout << "# EXIT STATEMENT" << endl ;
+					std::cout << "# EXIT STATEMENT" << endl ;
 				#endif
 				OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\
 \tmovl $0, %ebx  # Exits with exit status 0\n\
@@ -417,7 +453,7 @@ void Statement(void){
 		} else {
 			if( current == ID ){
 				#ifdef DEBUG
-					cout << "# # TOKEN == ID" << endl;
+					std::cout << "# # TOKEN == ID" << endl;
 				#endif
 				AssignementStatement();
 			} else {
@@ -429,27 +465,64 @@ void Statement(void){
 
 int getLength(string input) {
 	int length = 0;
+	#ifdef DEBUGDISP
+		std::cout << "# getLength(" << input << ")" << endl;
+	#endif
 	for(int i = 0; i < input.length(); i++){
-		if( input[i] != '\\'){
+		#ifdef DEBUGDISP
+			std::cout << "# Testing ==> " << input[i] << ")" << endl;
+		#endif
+		if( input[i] == '\\'){
+				#ifdef DEBUGDISP
+					std::cout << "# In \\ if" << input << ")" << endl;
+				#endif
+				i++;
+			if(input[i] == '0' || input[i] == 'e' || input[i] == 'x'){ // if something like \033[0;31m (RED COLOR)
+				#ifdef DEBUGDISP
+					std::cout << "# In 2nd if" << input << ")" << endl;
+				#endif
+				while(input[i] != 'm'){
+					if(input[i] == 'm'){
+						break;
+					}
+					i++;
+					if(i > input.length()){ 
+						Error("OULALA");
+					}		
+				}
+				length +=4;
+			} else {
+				#ifdef DEBUGDISP
+					std::cout << "\t# COUNT ==>\"" << input[i] << "\"" <<endl;
+				#endif
+				length +=1;
+			}
+		} else {
+			#ifdef DEBUGDISP
+				std::cout << "\t# COUNT ==>\"" << input[i] << "\"" <<endl;
+			#endif
 			length +=1;
 		}
 	}
+	#ifdef DEBUGDISP
+		std::cout << "# Length of \"" << input << "\" ==> " << length <<endl;
+	#endif
 	return length;
 }
 
 // DISPLAY <Expression>
 void DisplayStatement(void){
-	unsigned long long tag=TagNumber++;
-	#ifdef DEBUG
-		cout << "# ----------- In DisplayStatement(void) -----------" << endl;
+	unsigned long long tag=++TagNumber;
+	#ifdef DEBUGDISP
+		std::cout << "# ----------- In DisplayStatement(void) -----------" << endl;
 	#endif
 
 	OutStatementPart += "\n# DISPLAY ";
 	current = (TOKEN) lexer->yylex();
 
 	if(current == STRINGCONST){
-		//cout << "\t.string " << lexer->YYText() << endl;
-		//cout << "\tmov .string " << lexer->YYText() <<", FormatString                     # The value to be displayed" << endl;
+		//std::cout << "\t.string " << lexer->YYText() << endl;
+		//std::cout << "\tmov .string " << lexer->YYText() <<", FormatString                     # The value to be displayed" << endl;
 		string currentWord = lexer->YYText();
 		OutStatementPart += currentWord + "\n";
 		
@@ -469,11 +542,11 @@ void DisplayStatement(void){
 \tmovl $" + to_string(len) + ", %edx # asks to print " + to_string(len) + " characters our of the string passed in %ecx\n\
 \tint $0x80 # call the system call";
 
-		// cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
+		// std::cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
 		current = (TOKEN) lexer->yylex();
 	} else { // can be only a int for nowS
-		#ifdef DEBUG
-			cout << "# OTHER" << endl;
+		#ifdef DEBUGDISP
+			std::cout << "# OTHER" << endl;
 		#endif
 		OutStatementPart += lexer->YYText();
 		OutStatementPart += "\n";
@@ -486,14 +559,13 @@ void DisplayStatement(void){
 	}
 }
 
-
 // WHILE <Expression> DO <Statement> 	
 void WhileStatement(void){
 	TYPE expType;
 	#ifdef DEBUG
-		cout << "# ----------- WhileStatement(void) -----------" << endl;
+		std::cout << "# ----------- WhileStatement(void) -----------" << endl;
 	#endif
-	unsigned long long tag=TagNumber++;
+	unsigned long long tag=++TagNumber;
 	current = (TOKEN) lexer->yylex();
 	OutStatementPart += "While" + to_string(tag) + ":\n";
 
@@ -519,17 +591,16 @@ void WhileStatement(void){
 EndWhile" + to_string(tag) + ":\n";
 }
 
-
 // FOR <AssignementStatement> To <Expression> DO <Statement>
 void ForStatement(void){
 	#ifdef DEBUG
-		cout << "# ----------- ForStatement(void) -----------" << endl;
+		std::cout << "# ----------- ForStatement(void) -----------" << endl;
 	#endif
-	unsigned long long tag=TagNumber++;
+	unsigned long long tag=++TagNumber;
 	current = (TOKEN) lexer->yylex();
 
 	#ifdef DEBUG
-		cout << "\t# FOR i = " << lexer->YYText() << endl;
+		std::cout << "\t# FOR i = " << lexer->YYText() << endl;
 	#endif
 	
 	if( current == NUMBER){
@@ -566,7 +637,7 @@ void ForStatement(void){
 		current = (TOKEN) lexer->yylex(); // Get Expression
 		BlockStatement();
 		#ifdef DEBUG
-			cout << "# After BlockStatement();" << lexer->YYText() << endl;
+			std::cout << "# After BlockStatement();" << lexer->YYText() << endl;
 			OutStatementPart += "\n# afterBlockStatement();\n";
 		#endif
 	} else {
@@ -578,7 +649,7 @@ EndFor" + to_string(tag) + ":\n\
 \tpop i" + to_string(tag);
 
 	#ifdef DEBUG
-		cout << "# End of for" << lexer->YYText() << endl;
+		std::cout << "# End of for" << lexer->YYText() << endl;
 		OutStatementPart += "\n# End of for\n\n\n";
 	#endif
 }
@@ -586,9 +657,9 @@ EndFor" + to_string(tag) + ":\n\
 // "BEGIN" Statement { ";" Statement } "END"
 void BlockStatement(void){
 	#ifdef DEBUG
-		cout << "# ----------- BlockStatement(void) -----------" << endl;
+		std::cout << "# ----------- BlockStatement(void) -----------" << endl;
 	#endif
-	// unsigned long long tag=TagNumber++; Use less here
+	// unsigned long long tag=++TagNumber; Use less here
 	/*if( current == KEYWORD){
 		Statement();
 	}*/
@@ -607,7 +678,7 @@ void BlockStatement(void){
 		}
 		if(strcmp(lexer->YYText(), ";") == 0){
 			#ifdef DEBUG
-				cout << "\t# CURRENT ==> " << lexer->YYText() << endl;
+				std::cout << "\t# CURRENT ==> " << lexer->YYText() << endl;
 			#endif
 			current = (TOKEN) lexer->yylex();// skip the ;
 		} else {
@@ -615,7 +686,7 @@ void BlockStatement(void){
 		}
 	}
 	#ifdef DEBUG
-		cout << "\t# Before End of  BlockStatement" << endl;
+		std::cout << "\t# Before End of  BlockStatement" << endl;
 	#endif
 	//current = (TOKEN) lexer->yylex();
 	//if( current == KEYWORD && strcmp(lexer->YYText(), "END") == 0){
@@ -627,15 +698,19 @@ void BlockStatement(void){
 		Error("END Missing");
 	}*/
 	#ifdef DEBUG
-		cout << "# End of BlockStatement" << lexer->YYText() << endl;
+		std::cout << "# End of BlockStatement" << lexer->YYText() << endl;
 		OutStatementPart += "\n# End of BlockStatement\n\n\n";
 	#endif
 }
 
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
+	#ifdef DEBUG
+		std::cout << "# ----------- IFStatement(void) -----------" << endl;
+	#endif
 	TYPE expType;
-	unsigned long long tag=TagNumber++; // For unique name in asm program
+	unsigned long long tag=++TagNumber; // For unique name in asm program
+	//OutStatementPart += "TAG ===> " + to_string(tag) + "\n TagNumber ===> " + to_string(TagNumber) + "\n";
 	//current = (TOKEN) lexer->yylex(); // Get and cast next word
 	if(current != KEYWORD || strcmp(lexer->YYText(),"IF")  !=  0){
 		Error("In void IfStatement(void) without if");
@@ -643,6 +718,10 @@ void IfStatement(void){
 		current = (TOKEN) lexer->yylex();
 	}
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
+		#ifdef DEBUG
+			cout << "\t# Reading the Exp :" << endl;
+			#define DEBUGEXP
+		#endif
 		expType = Expression();
 		if(expType != BOOLEAN){
 			Error("Boolean expression needed !");
@@ -650,40 +729,47 @@ void IfStatement(void){
 	} else {
 		Error("Une exp était attendu");
 	}
-	OutStatementPart += "\tpop %rax\t# Get the result of expression\n";
-	//cout << "\tcmpq $0, %rax\t# Compare " << endl;
-	OutStatementPart += "\tje Else" + to_string(tag) + "\t# jmp à Else" + to_string(tag) + " if false\n";
+	//OutStatementPart += "\tpop %rax\t# Get the result of expression\n";
+	//std::cout << "\tcmpq $0, %rax\t# Compare " << endl;
+	//OutStatementPart += "\tje VRAI" + to_string(tag) + "\t# jmp à VRAI" + to_string(tag) + " if false\n\tjmp Else10";
 	
 	#ifdef DEBUG
-		cout << "# WORD ==> " << lexer->YYText() << endl;
+		std::cout << "# WORD ==> " << lexer->YYText() << endl;
 	#endif
 
 	if(  current != KEYWORD || strcmp(lexer->YYText(),"THEN")  !=  0 ) { // Mémo en pascal on écrit IF Machin THEN JeFaisMachin
 		Error(" Un 'THEN' attendu, en pascal on écrit IF Machin THEN JeFaisMachin");
 	}
 	current=(TOKEN) lexer->yylex();
-	Statement();
-
-	OutStatementPart += "\tje Next" + to_string(tag) + "\t# if true skip else\n";
-	//current=(TOKEN) lexer->yylex();
-	if( current == KEYWORD && strcmp(lexer->YYText(),"ELSE" ) == 0){
-		current=(TOKEN) lexer->yylex();
+	OutStatementPart += "Vrai" + to_string(tag) + ":\t# if true skip else\n";
+	// WHILE ! ELSE || END
+	#ifdef DEBUG
+		cout << "# WHILE ! ELSE || END" << endl;
+	#endif
+	while(true){
+		if(strcmp(lexer->YYText(),"ELSE" ) == 0 || strcmp(lexer->YYText(),"END" ) == 0){
+			break;
+		}
 		#ifdef DEBUG
-			cout << "# ELSE" << endl;
+			cout << "\t\t# WORD == " << lexer->YYText() <<endl;
 		#endif
-		OutStatementPart += "Else"  + to_string(tag) + ":\n";
-		current=(TOKEN) lexer->yylex();
 		Statement();
-	} else if(current == KEYWORD && strcmp(lexer->YYText(),"END" ) == 0){
-		#ifdef DEBUG
-			cout << "# END" << endl;
-		#endif
 		current=(TOKEN) lexer->yylex();
-		OutStatementPart += "Else" + to_string(tag) + ":\n\
-\tjmp Next" + to_string(tag) + "\t# no else jmp to Next\n\
-Next" + to_string(tag) + ":\n";
+	}
+	#ifdef DEBUG
+		cout << "# PLZ BE A ELSE => " << lexer->YYText() << "Ligne n°" << lexer->lineno() << endl;
+	#endif
+	if( current == KEYWORD && strcmp(lexer->YYText(),"ELSE" ) == 0){
+		#ifdef DEBUG
+			std::cout << "# ELSE" << endl;
+		#endif
+		OutStatementPart.insert( tempPosition, "\tjmp Else"+ to_string(tag) +"\n");
+		OutStatementPart += "\tjmp Next"+ to_string(tag) +"\nElse"  + to_string(tag) + ":\n";
+		current=(TOKEN) lexer->yylex();
+		BlockStatement();
+		OutStatementPart += "Next" + to_string(tag) + ":\n";
 	} else {
-		Error("ELSE or END missing !");
+		//Error("ELSE or END missing !");
 	}
 }
 
@@ -713,18 +799,20 @@ void Program(void){
 
 int main(int argc,char** argv){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
-	cout  	<<  "\t\t\t# This code was produced by the " << PROGNAME << endl;
-	cout	<<	"\t\t\t# "; print_release();
-	cout  	<<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;
+	std::cout  	<<  "\t\t\t# This code was produced by the " << PROGNAME << endl;
+	std::cout	<<	"\t\t\t# "; print_release();
+	std::cout  	<<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;
 	// Let's proceed to the analysis and code production
 	current = (TOKEN) lexer->yylex(); // save current token
 
 	Program();
-	cout << "# ----------------- DeclarationPart ----------------- #" << endl << OutDeclarationPart << 
+	std::cout << "# ----------------- DeclarationPart ----------------- #" << endl << OutDeclarationPart << 
 	"# ----------------- StatementPart ----------------- #" << endl << OutStatementPart << endl;
 	// Trailer for the gcc assembler / linker
-	cout  <<  "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top" << endl;
-	cout  <<  "\tret\t\t\t# Return from main function" << endl;
+	std::cout  <<  "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top" << endl;
+	std::cout  <<  "\tmovl     $1, %eax" << endl;
+	std::cout  <<  "\tmovl     $0, %ebx" << endl;
+	std::cout  <<  "\tint     $0x80\t\t\t# Return from main function" << endl;
 	if(current != FEOF){
 		cerr  << "Caractères en trop à la fin du programme : [" << current << "]";
 		Error("."); // unexpected characters at the end of program

@@ -1,15 +1,45 @@
-[a]
+[i]
 
-a := 0;
+i := 0;
 
+DISPLAY "Test of Beautiful feature :\n";
+DISPLAY "\tNormal \033[5mBlink \033[0mNormal\n";
+DISPLAY "Beautiful feature test : \033[1m[OK]\033[0m\n\n";
+
+DISPLAY "FOR statement test :\n"
 FOR 0 To 4 DO
-    DISPLAY "IN FOR\n";
     FOR 0 To 2 DO
-        a := 1 + a
-        DISPLAY "\ta = ";
-        DISPLAY a;
-        DISPLAY "\tIN FOR\n";
+        i := 1 + i;
+        DISPLAY "\ti = ";
+        DISPLAY i;
     END;
 END;
+DISPLAY "FOR statement test : \033[1m[OK]\033[0m\n\n";
 
-DISPLAY "Goodbye\n".
+DISPLAY "IF statement test :\n";
+IF (i = 0) THEN
+    DISPLAY "\tIF i = ";
+    DISPLAY i;
+    i := 5;
+ELSE
+    DISPLAY "\tELSE i = ";
+    DISPLAY i;
+    i := 0;
+END;
+
+DISPLAY "IF statement test : \033[1m[OK]\033[0m\n";
+
+/* Currently working on the while statement :)
+DISPLAY "WHILE statement test :\n";
+i :=0;
+DISPLAY "\ti start at  ";
+DISPLAY i;
+WHILE (i < 4) DO
+    i := 1 + i;
+    DISPLAY "\ti = ";
+    DISPLAY i;
+END;
+DISPLAY "WHILE statement test : \033[1m[OK]\033[0m\n";
+*/
+
+DISPLAY "\033[1mGoodbye\033[0m\n".

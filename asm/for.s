@@ -1,61 +1,6 @@
 			# This code was produced by the aTHO_ Compiler
 			# Revision 1.0 | Last update 23 jan 2022(c) 2021 Aubertin Emmanuel from https://athomisos.fr
 			# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)
-# IN [
-# ----------- In Statement(void) ----------- 
-# # TOKEN == ID
-
-# IN void Expression(void)
-
-# IN void SimpleExpression(void)
-# ----------- In Statement(void) ----------- 
-# # TOKEN == ID
-
-# IN void Expression(void)
-
-# IN void SimpleExpression(void)
-# ----------- In Statement(void) ----------- 
-# TOKEN == KEYWORD
-# FOR STATEMENT
-# ----------- ForStatement(void) -----------
-	# FOR i = 0
-# ----------- BlockStatement(void) -----------
-# ----------- In Statement(void) ----------- 
-# # TOKEN == ID
-
-# IN void Expression(void)
-
-# IN void SimpleExpression(void)
-	# CURRENT ==> ;
-# ----------- In Statement(void) ----------- 
-# # TOKEN == ID
-
-# IN void Expression(void)
-
-# IN void SimpleExpression(void)
-	# CURRENT ==> ;
-# ----------- In Statement(void) ----------- 
-# TOKEN == KEYWORD
-# DISPLAY STATEMENT
-# ----------- In DisplayStatement(void) -----------
-# WORD ==> "\tIN FOR\n"
-	# CURRENT ==> ;
-	# Before End of  BlockStatement
-# End of BlockStatementDISPLAY
-# ----------- In Statement(void) ----------- 
-# TOKEN == KEYWORD
-# DISPLAY STATEMENT
-# ----------- In DisplayStatement(void) -----------
-# WORD ==> "a = "
-# ----------- In Statement(void) ----------- 
-# TOKEN == KEYWORD
-# DISPLAY STATEMENT
-# ----------- In DisplayStatement(void) -----------
-# OTHER
-
-# IN void Expression(void)
-
-# IN void SimpleExpression(void)
 # ----------------- DeclarationPart ----------------- #
 	.data
 FormatString:    .string "%c"
