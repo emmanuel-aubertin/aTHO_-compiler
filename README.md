@@ -26,4 +26,8 @@ For all other distributions, it is sufficient to install all these dependencies:
 
 If you want more documentation (MakeFile, aTHOlang ...), you can go [here](https://gitlab.com/aTHO_/ue_compilateur/-/wikis/home)
 
+## See also :
+
+aTHOlang official VS-code extension [Click here](https://marketplace.visualstudio.com/items?itemName=aTHO.atholang&ssr=false#overview)
+
 Updated 25 May 2021 by [Aubertin Emmanuel](https://www.linkedin.com/in/emmanuel-aubertin/)
