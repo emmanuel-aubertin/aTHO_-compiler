@@ -1,11 +1,13 @@
 /***************************************************************************************/
 /*----- Auteur :        Aubertin Emmanuel               |  For: arg parser in cpp   ****/
-/*----- Description :   A compiler from a very simple Pascal-like structured 		****/
-/*-----					language LL(k) to 64-bit 80x86 Assembly langage        		****/
+/*----- Description :   A compiler from a very simple Pascal-like structured        ****/
+/*-----	                language LL(k) to 64-bit 80x86 Assembly langage             ****/
 /*----- Contact :       https://athomisos.fr                                        ****/
 /***************************************************************************************/
 
-// SYSCALL => vim /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+
+// SYSCALL => printf SYS_read | gcc -include sys/syscall.h -E -
+//         => vim /usr/include/x86_64-linux-gnu/asm/unistd_64.h
 
 #include <string>
 #include <iostream>
