@@ -12,9 +12,7 @@ build:
   script:
     - apt update && apt -y install make flex
     - make clean
-    - flex++ -d -otokeniser.cpp tokeniser.l
-    - g++ -c tokeniser.cpp
-    - g++ -ggdb -o compilateur compilateur.cpp tokeniser.o
+    - make 
   artifacts:
     paths:
       - compilateur
