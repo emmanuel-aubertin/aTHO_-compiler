@@ -1,9 +1,9 @@
-/***************************************************************************************/
-/*----- Auteur :        Aubertin Emmanuel               |  For: arg parser in cpp   ****/
-/*----- Description :   A compiler from a very simple Pascal-like structured        ****/
-/*-----	                language LL(k) to 64-bit 80x86 Assembly langage             ****/
-/*----- Contact :       https://athomisos.fr                                        ****/
-/***************************************************************************************/
+//--------------------------------------------------------------------------------------|
+//---- Auteur :        Aubertin Emmanuel               	|  For: aTHO_compiler   	----|
+//---- Description :   A compiler from a very simple Pascal-like structured    		----|
+//----	                language LL(k) to 64-bit 80x86 Assembly langage        		----|
+//---- Contact :       https://athomisos.fr                                    		----|
+//--------------------------------------------------------------------------------------|
 
 
 // SYSCALL => printf SYS_read | gcc -include sys/syscall.h -E -
@@ -17,7 +17,10 @@
 #include "tokeniser.h"
 #include <cstring>
 #include <fstream>
+#include <map>
+#include <list>
 #include <algorithm>
+#include "class/aTHOVar.h";
 
 
 std::string PROGNAME="aTHO_ Compiler";
@@ -33,7 +36,7 @@ void print_release() {
 using namespace std;
 
 //Enable All DEBUG mode
-#define DEBUG // if define the asm wil #be have a lot of useless com
+//#define DEBUG // if define the asm wil #be have a lot of useless com
 
 //DEBUG DISPLAY
 //#define DEBUGDISP
@@ -43,12 +46,15 @@ enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
 enum TYPE {INTEGER, BOOLEAN};
 
+
+
 // Prototypage :
 void IfStatement(void);
 void WhileStatement(void);
 void ForStatement(void);
 void BlockStatement(void);
 void DisplayStatement(void);
+void VarStatement(void);
 TYPE Expression(void);
 int getLength(string);
 //VARTYPE Number(void);
@@ -69,6 +75,8 @@ FlexLexer* lexer = new yyFlexLexer; // This is the flex tokeniser
 
 	
 set<string> DeclaredVariables;
+map<string,const aTHOVar*&> MapVar;
+
 unsigned long TagNumber=0;
 
 bool IsDeclared(const char *id){
@@ -257,6 +265,10 @@ FormatString1:    .string \"%llu\\n\"\n";
 		OutDeclarationPart +=   lexer->YYText();
 		OutDeclarationPart +=   ":\t.quad 0\n";
 		DeclaredVariables.insert(lexer->YYText());
+		const aTHOVar * MaVar = new aTHOVar(lexer->YYText(), "none");
+		string VarName = (string)lexer->YYText();
+		MapVar.emplace(VarName, MaVar); // Same as insert
+		// add in map for type
 		current=(TOKEN) lexer->yylex();
 		while(current == COMMA){
 			current=(TOKEN) lexer->yylex();
@@ -264,7 +276,12 @@ FormatString1:    .string \"%llu\\n\"\n";
 				Error("Un identificateur était attendu");
 			OutDeclarationPart +=   lexer->YYText();
 			OutDeclarationPart +=   ":\t.quad 0\n";
+
 			DeclaredVariables.insert(lexer->YYText());
+			const aTHOVar * MaVar = new aTHOVar(lexer->YYText(), "none");
+			string VarName = (string)lexer->YYText();
+			MapVar.emplace(VarName, MaVar); // Same as insert
+			// need to add map of aTHOVar
 			current=(TOKEN) lexer->yylex();
 		}
 		current=(TOKEN) lexer->yylex();
@@ -371,6 +388,7 @@ TYPE Expression(void){
 }
 
 // AssignementStatement := Identifier ":=" Expression
+// Non type variable
 void AssignementStatement(void){
 	string variable;
 	if(current != ID)
@@ -391,7 +409,6 @@ void AssignementStatement(void){
 // Statement := AssignementStatement
 void Statement(void){
 	if(strcmp(lexer->YYText(),"" ) != 0){
-
 		#ifdef DEBUG
 			std::cout << "# ----------- In Statement(void) ----------- " << endl;
 		#endif
@@ -406,63 +423,87 @@ void Statement(void){
 					std::cout << "# IF STATEMENT" << endl ;
 				#endif
 				IfStatement();
-			} else if( strcmp(lexer->YYText(),"THEN") == 0 || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
+				return;
+			}
+			
+			if( strcmp(lexer->YYText(),"THEN") == 0 || strcmp(lexer->YYText(),"ELSE") == 0){ // If we have then or else outside of an if do ..
 				#ifdef DEBUG
 					std::cout << "# THEN or ELSE outside of IF" << endl ;
 				#endif
 				Error("You need to be in a IF");
-			} else if( strcmp(lexer->YYText(),"WHILE" ) == 0){
+				return;
+			} 
+			
+			if( strcmp(lexer->YYText(),"WHILE" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# WHILE STATEMENT" << endl ;
 				#endif
 				WhileStatement();
-			} else if( strcmp(lexer->YYText(),"FOR" ) == 0){
+				return;
+			}
+			if( strcmp(lexer->YYText(),"FOR" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# FOR STATEMENT" << endl ;
 				#endif
 				ForStatement();
-			} else if( strcmp(lexer->YYText(),"BEGIN" ) == 0){
+				return;
+			}
+			
+			if( strcmp(lexer->YYText(),"BEGIN" ) == 0){
+				#ifdef DEBUG
+					std::cout << "# BLOCK STATEMENT" << endl ;
+				#endif
+				BlockStatement();
+				return;
+			}
+			if( strcmp(lexer->YYText(),"DO" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# BLOCK STATEMENT" << endl ;
 				#endif
 				BlockStatement(); 
-			} else if( strcmp(lexer->YYText(),"DO" ) == 0){
-				#ifdef DEBUG
-					std::cout << "# BLOCK STATEMENT" << endl ;
-				#endif
-				BlockStatement(); 
-			} else if( strcmp(lexer->YYText(),"END" ) == 0){
+				return;
+			}
+			if( strcmp(lexer->YYText(),"END" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# END STATEMENT" << endl ;
 				#endif
 				Statement();
-			}else if( strcmp(lexer->YYText(),"DISPLAY" ) == 0){
+				return;
+			}
+			
+			if( strcmp(lexer->YYText(),"DISPLAY" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# DISPLAY STATEMENT" << endl ;
 				#endif
 				DisplayStatement();
-			}else if( strcmp(lexer->YYText(),"EXIT" ) == 0){
+				return;
+			}
+			
+			if( strcmp(lexer->YYText(),"EXIT" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# EXIT STATEMENT" << endl ;
 				#endif
-				OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\
-\tmovl $0, %ebx  # Exits with exit status 0\n\
-\tint $0x80\t# Interupte prog\n";
-				Statement();
-			} else {
-			Error("Not code yet");
+				OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\tmovl $0, %ebx  # Exits with exit status 0\n\tint $0x80\t# Interupte prog\n";
+				Statement(); // But continue to compile
+				return;
 			}
-		} else {
-			if( current == ID ){
-				#ifdef DEBUG
-					std::cout << "# # TOKEN == ID" << endl;
-				#endif
-				AssignementStatement();
-			} else {
-				Error("Instruction unreachable !");
+			
+			if( strcmp(lexer->YYText(),"VAR" ) == 0) {
+				VarStatement();
+				return;
 			}
+
+			Error("Unkwon keyword :");
 		}
-	}
+		if( current == ID ){
+			#ifdef DEBUG
+				std::cout << "# # TOKEN == ID" << endl;
+			#endif
+			AssignementStatement();
+			return;
+		}
+		Error("Instruction unreachable !");
+		}
 }
 
 int getLength(string input) {
@@ -714,20 +755,20 @@ void IfStatement(void){
 	//current = (TOKEN) lexer->yylex(); // Get and cast next word
 	if(current != KEYWORD || strcmp(lexer->YYText(),"IF")  !=  0){
 		Error("In void IfStatement(void) without if");
-	}else{
-		current = (TOKEN) lexer->yylex();
 	}
-	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
-		#ifdef DEBUG
-			cout << "\t# Reading the Exp :" << endl;
-			#define DEBUGEXP
-		#endif
-		expType = Expression();
-		if(expType != BOOLEAN){
-			Error("Boolean expression needed !");
-		}
-	} else {
+	current = (TOKEN) lexer->yylex();
+
+
+	if(current != RPARENT && strcmp(lexer->YYText(),"(")  !=  0){
 		Error("Une exp était attendu");
+	}
+	#ifdef DEBUG
+		cout << "\t# Reading the Exp :" << endl;
+		#define DEBUGEXP
+	#endif
+	expType = Expression();
+	if(expType != BOOLEAN){
+		Error("Boolean expression needed !");
 	}
 	//OutStatementPart += "\tpop %rax\t# Get the result of expression\n";
 	//std::cout << "\tcmpq $0, %rax\t# Compare " << endl;
@@ -773,6 +814,130 @@ void IfStatement(void){
 	}
 }
 
+// VAR a,b....: TYPE;
+void VarStatement(void){
+	#ifdef DEBUG
+		std::cout << "# ----------- VarStatement(void) -----------" << endl;
+		std::cout << "# CURENT ==>" <<  lexer->YYText()<< endl;
+	#endif
+	if(current == KEYWORD && strcmp(lexer->YYText(), "VAR") == 0 ){
+		current=(TOKEN) lexer->yylex();
+	}
+
+	list<string> TempVar;
+
+	while (strcmp(lexer->YYText(), ":") != 0){
+		if(strcmp(lexer->YYText(), ",") != 0){
+			#ifdef DEBUG
+				std::cout << "# NEW VAR ==>" <<  lexer->YYText()<< endl;
+			#endif
+			TempVar.push_front(lexer->YYText());
+		}
+		current=(TOKEN) lexer->yylex();
+	}
+	
+	if(strcmp(lexer->YYText(), ":") == 0){
+		current=(TOKEN) lexer->yylex();
+	}
+	string TypeOfVar = lexer->YYText();
+	#ifdef DEBUG
+		std::cout << "# TYPE is ==>" << TypeOfVar << endl;
+	#endif
+	current=(TOKEN) lexer->yylex();
+
+
+	if(TypeOfVar == "INT"){
+		for(const string & var : TempVar){
+			OutDeclarationPart += var + ":\t.quad 0\n";
+			DeclaredVariables.insert(var);
+		}
+		return;
+	}
+	if(TypeOfVar == "STR"){
+		for(const string & var : TempVar){
+			OutDeclarationPart += var + ":\t.string \"\"\n";
+			DeclaredVariables.insert(var);
+		}
+		return;
+	}
+
+	Error("Unrecognized type");
+/*
+	if( strcmp(TypeOfVar,"INT" ) == 0){
+		current = (TOKEN) lexer->yylex();
+		if(! IsDeclared(lexer->YYText())){
+			#ifdef DEBUG
+				cout << "# Not wet declared"<<endl;
+			#endif
+			OutDeclarationPart +=   lexer->YYText();
+			DeclaredVariables.insert(lexer->YYText());
+			OutDeclarationPart +=   ":\t.quad ";
+			current = (TOKEN) lexer->yylex();
+			if(strcmp(lexer->YYText(),"=" ) == 0 ){
+				current = (TOKEN) lexer->yylex();
+				if(current == NUMBER){
+					OutDeclarationPart +=   lexer->YYText();
+					current = (TOKEN) lexer->yylex();
+				} else {
+					Error("Need int");
+				}
+			} else {
+				#ifdef DEBUG
+					cout << "# Set as default value"<<endl;
+					cout << "# current ==> " << lexer->YYText()<<endl;
+				#endif
+				OutDeclarationPart += "0";
+			}
+			OutDeclarationPart += "\n";
+		} else {
+			Error("Variable allready declared");
+		}
+	} else if( strcmp(lexer->YYText(),"float") == 0){
+		current = (TOKEN) lexer->yylex();
+		if(! IsDeclared(lexer->YYText())){
+			OutDeclarationPart +=   lexer->YYText();
+			DeclaredVariables.insert(lexer->YYText());
+			OutDeclarationPart +=   ":\t.double ";
+			current = (TOKEN) lexer->yylex();
+			if(strcmp(lexer->YYText(),"=" ) == 0 ){
+				current = (TOKEN) lexer->yylex();
+				if(current == FLOAT){
+					OutDeclarationPart +=   lexer->YYText();
+					current = (TOKEN) lexer->yylex();
+				} else {
+					Error("Need int");
+				}
+			} else { OutDeclarationPart += "0.0";}
+			OutDeclarationPart += "\n";
+		} else {
+			Error("Variable allready declared");
+		}
+	}  else if( strcmp(lexer->YYText(),"string") == 0){
+		current = (TOKEN) lexer->yylex();
+		if(! IsDeclared(lexer->YYText())){
+			OutDeclarationPart +=   lexer->YYText();
+			DeclaredVariables.insert(lexer->YYText());
+			OutDeclarationPart +=   ":\t.string ";
+			current = (TOKEN) lexer->yylex();
+			if(strcmp(lexer->YYText(),"=" ) == 0 ){
+				current = (TOKEN) lexer->yylex();
+				if(current == STRINGCONST){
+					OutDeclarationPart +=   lexer->YYText();
+					current = (TOKEN) lexer->yylex();
+				} else {
+					Error("Need int");
+				}
+			} else { OutDeclarationPart += "";}
+			OutDeclarationPart += "\n";
+		} else {
+			Error("Variable allready declared");
+		}
+	} else {
+		Error("Unrecognized variable declaration");
+	}
+	//current = (TOKEN) lexer->yylex();*/
+}
+
 // StatementPart := Statement {";" Statement} "."
 void StatementPart(void){
 	OutStatementPart += "\t.text\t\t# The following lines contain the program\n\
@@ -799,6 +964,9 @@ void Program(void){
 
 int main(int argc,char** argv){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
+	if (! __cplusplus >= 201402L ){
+		Error("You must have C++14 or newer");
+	}
 	std::cout  	<<  "\t\t\t# This code was produced by the " << PROGNAME << endl;
 	std::cout	<<	"\t\t\t# "; print_release();
 	std::cout  	<<  "\t\t\t# This Compiler is a fork of CERI Compiler (framagit.org/jourlin/cericompiler)" << endl;

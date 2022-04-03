@@ -20,7 +20,7 @@ main:			# The main function body :
 	pop x
 	push $0
 	pop a
-movq $0, %rcx # Get Start value
+	movq $0, %rcx # Get Start value
 For0:
 
 	cmp $4, i0 # To KEYWORD

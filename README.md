@@ -11,7 +11,9 @@ To : 64 bit 80x86 assembly langage (AT&T)
 
 ## Installation :
 
-Ubuntu/Debian :
+Do `make install``
+
+Or Ubuntu/Debian :
 
 ```
 git clone https://gitlab.com/aTHO_/aTHO_compiler.git

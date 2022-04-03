@@ -29,7 +29,7 @@ id {alpha}({alpha}|{digit})*
 addop (\+|\-|\|\|)
 mulop (\*|\/|%|\&\&)
 relop (\<|\>|"="|\<=|\>=|!=)
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"DO"|"FOR"|"To"|"BEGIN"|"END"|"DISPLAY"|"EXIT")
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"DO"|"FOR"|"To"|"BEGIN"|"END"|"DISPLAY"|"VAR"|"EXIT")
 dot (".")
 unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"\"WHILE"\"DO"\"FOR"\"To"\"BEGIN"\"END"]+
 

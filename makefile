@@ -5,6 +5,7 @@ clean:
 	rm -f tokeniser.cpp test compilateur
 	@echo "\e[32m\tDONE\e[0m"
 tokeniser.cpp:	tokeniser.l
+	clear
 	@echo "\n\e[32m--------| \e[1;32mCompilation of tokeniser.l\e[0m\e[32m |--------\e[0m"
 	flex++ -d -otokeniser.cpp tokeniser.l
 	@echo "\e[32m\tDONE\e[0m\n"
@@ -14,7 +15,7 @@ tokeniser.o:	tokeniser.cpp
 	@echo "\e[32m\tDONE\e[0m\n"
 compilateur:	compilateur.cpp tokeniser.o
 	@echo "\e[32m--------| \e[1;32mCompilation of compilateur.cpp\e[0m\e[32m |--------\e[0m"
-	g++ -ggdb -o aTHOlang compilateur.cpp tokeniser.o
+	g++ -ggdb -o aTHOlang compilateur.cpp class/aTHOVar.cpp tokeniser.o
 	@echo "\e[32m\tDONE\e[0m\n"
 aTHOlang:		compilateur input.aTHO
 	@echo "\e[32m--------| \e[1mTest of compilateur\e[0m\e[32m |--------\e[0m"

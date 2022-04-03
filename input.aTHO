@@ -35,10 +35,15 @@ DISPLAY "\ti start at  ";
 DISPLAY i;
 WHILE (i < 4) DO
     i := 1 + i;
-    DISPLAY "\ti = ";
+    DISPLAY "i = ";
     DISPLAY i;
 END;
 DISPLAY "WHILE statement test : \033[1m[OK]\033[0m\n";
 
+DISPLAY "VAR statement :\n";
+VAR a,b,x: INT;
+VAR test,string,varr: STR;
+x := 4;
+DISPLAY "VAR statement test : \033[1m[OK]\033[0m\n";
 
 DISPLAY "\033[1mGoodbye\033[0m\n".
