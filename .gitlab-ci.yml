@@ -12,7 +12,10 @@ build:
   script:
     - apt update && apt -y install make flex
     - make clean
-    - make 
+    - flex++ -d -otokeniser.cpp tokeniser.l
+    - g++ -c tokeniser.cpp
+    - g++ -ggdb -o aTHOlang compilateur.cpp class/aTHOVar.cpp tokeniser.o
+
   artifacts:
     paths:
       - compilateur
@@ -21,6 +24,6 @@ Compilation:
   stage: test
   needs: ["build"]
   script:
-    - ./compilateur <input.aTHO >test.s
+    - ./aTHOlang <input.aTHO >test.s
     - gcc  -ggdb -no-pie -fno-pie test.s -o test.bin
     - ./test.bin
