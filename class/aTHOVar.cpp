@@ -4,6 +4,8 @@
 //----- Contact :       https://athomisos.fr            |                           ----|
 //--------------------------------------------------------------------------------------|
 
+
+// J'ai décidé de faire une class car pour l'avenir le code dans compilateur.cpp pour etre optimiser en utilisant des methode par example.
 #include <string>
 #include <iostream>
 #include <cstdlib>
@@ -26,7 +28,12 @@ aTHOVar::aTHOVar(const char* InputName, const char* InputType)
     else if ( strcmp(InputType, "str") == 0)
     {
         this->TypeOfVar = STRING;
-    } else {
+    } 
+    else if ( strcmp(InputType, "flt") == 0)
+    {
+        this->TypeOfVar = FLOAT;
+    }
+    else {
         this->TypeOfVar = NONE;
     }
 }

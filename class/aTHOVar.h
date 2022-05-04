@@ -4,7 +4,7 @@
 using namespace std;
 
 
-enum VarTYPE {INT, STRING, NONE};
+enum VarTYPE {INT, STRING, FLOAT, NONE};
 
 class aTHOVar 
 {

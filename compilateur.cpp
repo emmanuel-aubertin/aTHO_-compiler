@@ -860,82 +860,15 @@ void VarStatement(void){
 		}
 		return;
 	}
+	if(TypeOfVar == "FLOAT"){
+		for(const string & var : TempVar){
+			OutDeclarationPart += var + ":\t.double 0.0\n";
+			DeclaredVariables.insert(var);
+		}
+		return;
+	}
 
 	Error("Unrecognized type");
-/*
-	if( strcmp(TypeOfVar,"INT" ) == 0){
-		current = (TOKEN) lexer->yylex();
-		if(! IsDeclared(lexer->YYText())){
-			#ifdef DEBUG
-				cout << "# Not wet declared"<<endl;
-			#endif
-			OutDeclarationPart +=   lexer->YYText();
-			DeclaredVariables.insert(lexer->YYText());
-			OutDeclarationPart +=   ":\t.quad ";
-			current = (TOKEN) lexer->yylex();
-			if(strcmp(lexer->YYText(),"=" ) == 0 ){
-				current = (TOKEN) lexer->yylex();
-				if(current == NUMBER){
-					OutDeclarationPart +=   lexer->YYText();
-					current = (TOKEN) lexer->yylex();
-				} else {
-					Error("Need int");
-				}
-			} else {
-				#ifdef DEBUG
-					cout << "# Set as default value"<<endl;
-					cout << "# current ==> " << lexer->YYText()<<endl;
-				#endif
-				OutDeclarationPart += "0";
-			}
-			OutDeclarationPart += "\n";
-		} else {
-			Error("Variable allready declared");
-		}
-	} else if( strcmp(lexer->YYText(),"float") == 0){
-		current = (TOKEN) lexer->yylex();
-		if(! IsDeclared(lexer->YYText())){
-			OutDeclarationPart +=   lexer->YYText();
-			DeclaredVariables.insert(lexer->YYText());
-			OutDeclarationPart +=   ":\t.double ";
-			current = (TOKEN) lexer->yylex();
-			if(strcmp(lexer->YYText(),"=" ) == 0 ){
-				current = (TOKEN) lexer->yylex();
-				if(current == FLOAT){
-					OutDeclarationPart +=   lexer->YYText();
-					current = (TOKEN) lexer->yylex();
-				} else {
-					Error("Need int");
-				}
-			} else { OutDeclarationPart += "0.0";}
-			OutDeclarationPart += "\n";
-		} else {
-			Error("Variable allready declared");
-		}
-	}  else if( strcmp(lexer->YYText(),"string") == 0){
-		current = (TOKEN) lexer->yylex();
-		if(! IsDeclared(lexer->YYText())){
-			OutDeclarationPart +=   lexer->YYText();
-			DeclaredVariables.insert(lexer->YYText());
-			OutDeclarationPart +=   ":\t.string ";
-			current = (TOKEN) lexer->yylex();
-			if(strcmp(lexer->YYText(),"=" ) == 0 ){
-				current = (TOKEN) lexer->yylex();
-				if(current == STRINGCONST){
-					OutDeclarationPart +=   lexer->YYText();
-					current = (TOKEN) lexer->yylex();
-				} else {
-					Error("Need int");
-				}
-			} else { OutDeclarationPart += "";}
-			OutDeclarationPart += "\n";
-		} else {
-			Error("Variable allready declared");
-		}
-	} else {
-		Error("Unrecognized variable declaration");
-	}
-	//current = (TOKEN) lexer->yylex();*/
 }
 
 // StatementPart := Statement {";" Statement} "."
