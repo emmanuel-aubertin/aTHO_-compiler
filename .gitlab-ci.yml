@@ -14,7 +14,7 @@ build:
     - make clean
     - flex++ -d -otokeniser.cpp tokeniser.l
     - g++ -c tokeniser.cpp
-    - g++ -ggdb -o aTHOlang compilateur.cpp class/aTHOVar.cpp tokeniser.o
+    - g++ -ggdb -o aTHOlang compilateur.cpp tokeniser.o
 
   artifacts:
     paths:
