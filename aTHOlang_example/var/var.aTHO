@@ -1,0 +1,4 @@
+VAR firstInt, secondInt: INT;
+VAR firstChar, secondChar: CHAR;
+VAR firstDouble, secondDouble: DOUBLE;
+.

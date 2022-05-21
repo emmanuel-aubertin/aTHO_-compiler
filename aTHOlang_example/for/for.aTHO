@@ -1,0 +1,5 @@
+[i]
+FOR 0 To 4 DO
+    i := 1 + i;
+END;
+.

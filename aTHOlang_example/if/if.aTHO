@@ -1,0 +1,7 @@
+[i]
+IF (i = 0) THEN
+    i := 5;
+ELSE
+    i := 0;
+END;
+.

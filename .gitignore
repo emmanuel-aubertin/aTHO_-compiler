@@ -5,5 +5,5 @@ test.s
 test*
 .vscode/
 output.s
-temp.s
 aTHOlang
+.DS_Store

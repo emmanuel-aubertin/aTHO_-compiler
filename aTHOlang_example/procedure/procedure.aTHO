@@ -1,0 +1,9 @@
+PROCEDURE PrintFine() ;
+BEGIN
+    DISPLAY "This is fine :)\n"
+END ;
+
+PrintFine;
+PrintFine;
+PrintFine;
+.

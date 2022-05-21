@@ -6,6 +6,11 @@ DISPLAY "Test of Beautiful feature :\n";
 DISPLAY "\tNormal \033[5mBlink \033[0mNormal\n";
 DISPLAY "Beautiful feature test : \033[1m[OK]\033[0m\n\n";
 
+PROCEDURE PrintFine() ;
+BEGIN
+    DISPLAY "This is fine :)\n"
+END ;
+
 DISPLAY "FOR statement test :\n"
 FOR 0 To 4 DO
     FOR 0 To 2 DO
@@ -42,8 +47,14 @@ DISPLAY "WHILE statement test : \033[1m[OK]\033[0m\n";
 
 DISPLAY "VAR statement :\n";
 VAR a,b,x: INT;
-VAR test,string,varr: STR;
+VAR test,string,varr: CHAR;
+VAR doublele: DOUBLE;
+DISPLAY doublele;
 x := 4;
 DISPLAY "VAR statement test : \033[1m[OK]\033[0m\n";
+
+DISPLAY "PROCEDURE statement test :\n";
+PrintFine;
+DISPLAY "PROCEDURE statement test : \033[1m[OK]\033[0m\n";
 
 DISPLAY "\033[1mGoodbye\033[0m\n".

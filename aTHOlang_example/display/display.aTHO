@@ -1,0 +1,18 @@
+[i]
+
+i := 6;
+
+DISPLAY "We can display some static string\n";
+
+DISPLAY "\tNormal \033[5mBlink \033[0mNormal\n";
+
+DISPLAY i;
+
+VAR chartest: CHAR;
+VAR doubletest: DOUBLE;
+
+chartest := "a";
+DISPLAY chartest;
+
+DISPLAY doubletest;
+.

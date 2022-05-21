@@ -22,14 +22,14 @@ using namespace std;
 
 stringconst \"[^\n"]+\"
 ws [ \t\n\r]+
-alpha [A-Za-z]
+alpha [A-Za-z_]
 digit [0-9]
-number {digit}+
+number {digit}+(\.{digit}+)?
 id {alpha}({alpha}|{digit})*
 addop (\+|\-|\|\|)
 mulop (\*|\/|%|\&\&)
 relop (\<|\>|"="|\<=|\>=|!=)
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"DO"|"FOR"|"To"|"BEGIN"|"END"|"DISPLAY"|"VAR"|"EXIT")
+keyword	(DISPLAY|IF|THEN|ELSE|BEGIN|END|FOR|TO|DOWNTO|WHILE|DO|VAR|INT|BOOL|CHAR|DOUBLE|ARRAY|CASE|FOR|PROCEDURE)
 dot (".")
 unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.\"IF"\"THEN"\"ELSE"\"WHILE"\"DO"\"FOR"\"To"\"BEGIN"\"END"]+
 

@@ -20,7 +20,7 @@
 #include <map>
 #include <list>
 #include <algorithm>
-#include "class/aTHOVar.h";
+
 
 
 std::string PROGNAME="aTHO_ Compiler";
@@ -44,7 +44,7 @@ using namespace std;
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
-enum TYPE {INTEGER, BOOLEAN};
+enum TYPE {INT, BOOL, CHAR, DOUBLE, ARRAY, STR};
 
 
 
@@ -54,16 +54,19 @@ void WhileStatement(void);
 void ForStatement(void);
 void BlockStatement(void);
 void DisplayStatement(void);
+void ProcedureStatement(void);
 void VarStatement(void);
 TYPE Expression(void);
 int getLength(string);
 //VARTYPE Number(void);
 
+bool isFunc = false;
 int strcounter = 0;
 size_t tempPosition; // !! Need to be reset after all use
 string tempBlock;
 string OutDeclarationPart;
 string OutStatementPart;
+string OutFunctionPart;
 
 
 TOKEN current;				// Current token
@@ -73,14 +76,21 @@ FlexLexer* lexer = new yyFlexLexer; // This is the flex tokeniser
 // lexer->yylex() returns the type of the lexicon entry (see enum TOKEN in tokeniser.h)
 // and lexer->YYText() returns the lexicon entry as a string
 
-	
-set<string> DeclaredVariables;
-map<string,const aTHOVar*&> MapVar;
+		
+set<string> DeclaredFunc;
+map<string, enum TYPE> DeclaredVariables;	// Store declared variables and their types
+map<string, unsigned long long> SizeDeclaredArrays;  // Store the size of the declared arrays
+map<string, enum TYPE> TypeDeclaredArrays;  // Store the type of the declared arrays
+
 
 unsigned long TagNumber=0;
 
 bool IsDeclared(const char *id){
 	return DeclaredVariables.find(id) != DeclaredVariables.end();
+}
+
+bool IsFunc(const char *id){
+	return DeclaredFunc.find(id) != DeclaredFunc.end();
 }
 
 void Error(string s){
@@ -108,21 +118,39 @@ void Error(string s){
 // Letter := "a"|...|"z"
 	
 TYPE Identifier(void){
-	OutStatementPart += "\tpush ";
-	OutStatementPart += lexer->YYText();
-	OutStatementPart += "\n";
+	if(!IsDeclared(lexer->YYText())){
+		cerr << "Erreur : Variable '"<<lexer->YYText()<<"' non déclarée"<<endl;
+		exit(-1);
+	}
+
+	enum TYPE VarType = DeclaredVariables[lexer->YYText()];
+
+	if(isFunc){
+		OutFunctionPart  += "\tpush ";
+		OutFunctionPart += lexer->YYText();
+		OutFunctionPart += "\n";
+	} else {
+		OutStatementPart += "\tpush ";
+		OutStatementPart += lexer->YYText();
+		OutStatementPart += "\n";
+	}
+
 	current=(TOKEN) lexer->yylex();
-	return INTEGER;
+	return VarType;
 }
 
 TYPE Number(void){
-	OutStatementPart +=  "\tpush $" + to_string(atoi(lexer->YYText())) + "\n";
+		if(isFunc){
+		OutFunctionPart += "\tpush $" + to_string(atoi(lexer->YYText())) + "\n";
+	} else {
+		OutStatementPart +=  "\tpush $" + to_string(atoi(lexer->YYText())) + "\n";
+	}
 	current=(TOKEN) lexer->yylex();
-	return INTEGER;
+	return INT;
 }
 
 TYPE Factor(void){
-	TYPE typeExp;
+	enum TYPE typeExp;
 	if(current == RPARENT){
 		current=(TOKEN) lexer->yylex();
 		typeExp = Expression();
@@ -172,26 +200,58 @@ TYPE Term(void){
 		if(firstFactor != secondFactor){ // If not same type
 			Error("Type non compatible !");
 		}
-		OutStatementPart +=  "\tpop %rbx\n\
+		if(isFunc){
+			OutFunctionPart +="\tpop %rbx\n\
 \tpop %rax\n";	// get second operand
+		} else {
+			OutStatementPart +=  "\tpop %rbx\n\
+\tpop %rax\n";	// get second operand	
+		}
+		
 		switch(mulop){
 			case AND:
-				OutStatementPart +=  "\tmulq	%rbx\n\
+				if(isFunc){
+					OutFunctionPart += "\tmulq	%rbx\n\
 \tpush %rax\t# AND\n";	// store result
+				} else {
+					OutStatementPart += "\tmulq	%rbx\n\
+\tpush %rax\t# AND\n";	// store result
+				}
+
 				break;
 			case MUL:
-				OutStatementPart +=  "\tmulq	%rbx\n\
+				if(isFunc){
+					OutFunctionPart += "\tmulq	%rbx\n\
 \tpush %rax\t# MUL\n";	// store result
+				} else {
+					OutStatementPart +=  "\tmulq	%rbx\n\
+\tpush %rax\t# MUL\n";	// store result
+				}
+
 				break;
 			case DIV:
+				if(isFunc){
+					OutFunctionPart +="\tmovq $0, %rdx\n\
+\tdiv %rbx\n\
+\tpush %rax\t# DIV\n";		// store result
+				} else {
 				OutStatementPart +=  "\tmovq $0, %rdx\n\
 \tdiv %rbx\n\
 \tpush %rax\t# DIV\n";		// store result
+				}
+
 				break;
 			case MOD:
+				if(isFunc){
+					OutFunctionPart +=  "\tmovq $0, %rdx\n\
+\tdiv %rbx\n\
+\tpush %rdx\t# MOD\n";		// store result
+				} else {
 				OutStatementPart +=  "\tmovq $0, %rdx\n\
 \tdiv %rbx\n\
 \tpush %rdx\t# MOD\n";		// store result
+				}
+
 				break;
 			default:
 				Error("opérateur multiplicatif attendu");
@@ -228,31 +288,61 @@ TYPE SimpleExpression(void){
 		if(firstTerm != secondTerm){// If not same type
 			Error("Type non compatible !");
 		}
-		OutStatementPart +=  "\tpop %rbx\n\
-\tpop %rax\n";	// get second operand
+		if(isFunc){
+			OutFunctionPart +=  "\tpop %rbx\n\
+			\tpop %rax\n";	// get second operand
+		} else {
+			OutStatementPart +=  "\tpop %rbx\n\
+			\tpop %rax\n";	// get second operand
+		}
+
+
 		switch(adop){
 			case OR:
-				OutStatementPart += "\taddq	%rbx, %rax\t# OR\n";// operand1 OR operand2
+				if(isFunc){
+					OutFunctionPart +="\taddq	%rbx, %rax\t# OR\n";// operand1 OR operand2
+				} else {
+					OutStatementPart += "\taddq	%rbx, %rax\t# OR\n";// operand1 OR operand2
+				}
+				
 				break;			
 			case ADD:
-				OutStatementPart += "\taddq	%rbx, %rax\t# ADD\n";	// add both operands
+				if(isFunc){
+					OutFunctionPart +=  "\taddq	%rbx, %rax\t# ADD\n";	// add both operands
+				} else {
+					OutStatementPart += "\taddq	%rbx, %rax\t# ADD\n";	// add both operands
+				}
 				break;			
 			case SUB:	
-				OutStatementPart +="\tsubq	%rbx, %rax\t# SUB\n";	// substract both operands
+				if(isFunc){
+					OutFunctionPart +="\tsubq	%rbx, %rax\t# SUB\n";	// substract both operands
+				} else {
+					OutStatementPart +="\tsubq	%rbx, %rax\t# SUB\n";	// substract both operands
+				}
 				break;
 			default:
 				Error("opérateur additif inconnu");
 		}
-		OutStatementPart += "\tpush %rax\n";			// store result
+		if(isFunc){
+			OutFunctionPart + "\tpush %rax\n";	 // store result
+		} else {
+			OutStatementPart += "\tpush %rax\n";	 // store result
+		}
+				
 	}
 	return firstTerm;
 }
 
 // DeclarationPart := "[" Ident {"," Ident} "]"
 void DeclarationPart(void){
+	TYPE currentTYPE = INT;
+	string VarName;
 	OutDeclarationPart +=  "\t.data\n\
-FormatString:    .string \"%c\"\n\
-FormatString1:    .string \"%llu\\n\"\n";
+FormatString:    .string \"%c\" # For char\n\
+FormatString1:    .string \"%llu\\n\"\n\
+FormatString2:\t.string \"%lf\" # For Float\n\
+TrueSTR:\t.string \"\033[1mTRUE\033[0m\"\n\
+FalseSTR:\t.string \"\033[1mFALSE\033[0m\"\n";
 	if(current == RBRACKET){
 		#ifdef DEBUG
 			std::cout << "# IN [" << endl;
@@ -263,11 +353,13 @@ FormatString1:    .string \"%llu\\n\"\n";
 		if(current != ID)
 			Error("Un identificater était attendu");
 		OutDeclarationPart +=   lexer->YYText();
+		VarName = (string)lexer->YYText();
 		OutDeclarationPart +=   ":\t.quad 0\n";
-		DeclaredVariables.insert(lexer->YYText());
-		const aTHOVar * MaVar = new aTHOVar(lexer->YYText(), "none");
-		string VarName = (string)lexer->YYText();
-		MapVar.emplace(VarName, MaVar); // Same as insert
+		
+		DeclaredVariables[VarName]=currentTYPE;
+		//DeclaredVariables.insert(lexer->YYText());
+		VarName = (string)lexer->YYText();
+		DeclaredVariables[VarName]=currentTYPE;
 		// add in map for type
 		current=(TOKEN) lexer->yylex();
 		while(current == COMMA){
@@ -277,10 +369,9 @@ FormatString1:    .string \"%llu\\n\"\n";
 			OutDeclarationPart +=   lexer->YYText();
 			OutDeclarationPart +=   ":\t.quad 0\n";
 
-			DeclaredVariables.insert(lexer->YYText());
-			const aTHOVar * MaVar = new aTHOVar(lexer->YYText(), "none");
-			string VarName = (string)lexer->YYText();
-			MapVar.emplace(VarName, MaVar); // Same as insert
+			//DeclaredVariables.insert(lexer->YYText());
+			VarName = (string)lexer->YYText();
+			DeclaredVariables[VarName]=currentTYPE;
 			// need to add map of aTHOVar
 			current=(TOKEN) lexer->yylex();
 		}
@@ -332,78 +423,214 @@ TYPE Expression(void){
 		if(firstPart != secondPart){ // If not same type
 			Error("Type non compatible !");
 		}
-		OutStatementPart += "\tpop %rax\n\
-\tpop %rbx\n\
-\tcmpq %rax, %rbx\n";
+
+
+		if( firstPart != DOUBLE){
+			if(isFunc){
+				OutFunctionPart +="\tpop %rax\n\
+	\tpop %rbx\n\
+	\tcmpq %rax, %rbx\n";
+			} else {
+				OutStatementPart += "\tpop %rax\n\
+	\tpop %rbx\n\
+	\tcmpq %rax, %rbx\n";
+			}
+		} else {
+			if(isFunc){
+				OutFunctionPart +="\tfldl	(%rsp)\n\
+					\tfldl	8(%rsp)\t# operand 1 in %st(0) && operand2 in %st(1)\n\
+					\t addq $16, %rsp\n\
+					\tfcomip %st(1)\n\
+					\tfaddp %st(1)\n";
+			} else {
+				OutStatementPart +="\tfldl	(%rsp)\n\
+					\tfldl	8(%rsp)\t# operand 1 in %st(0) && operand2 in %st(1)\n\
+					\t addq $16, %rsp\n\
+					\tfcomip %st(1)\n\
+					\tfaddp %st(1)\n";
+			}
+		}
+
 
 		switch(oprel){
 			case EQU:
 				#ifdef DEBUG
 					cout << "\t\t# EQU expression" << endl;
 				#endif
-				OutStatementPart += "\tje Vrai" + to_string(TagNumber) + "\t# If equal\n";
+				if(isFunc){
+					OutFunctionPart += "\tje Vrai" + to_string(TagNumber) + "\t# If equal\n";;
+				} else {
+					OutStatementPart += "\tje Vrai" + to_string(TagNumber) + "\t# If equal\n";
+				}
 				break;
 			case DIFF:
 				#ifdef DEBUG
 					cout << "\t\t# DIFF expression" << endl;
 				#endif
-				OutStatementPart += "\tjne Vrai" + to_string(TagNumber) + "\t# If different\n";
+				if(isFunc){
+					OutFunctionPart += "\tjne Vrai" + to_string(TagNumber) + "\t# If different\n";
+				} else {
+					OutStatementPart += "\tjne Vrai" + to_string(TagNumber) + "\t# If different\n";
+				}
+				
 				break;
 			case SUPE:
 				#ifdef DEBUG
 					cout << "\t\t# SUPE expression" << endl;
 				#endif
-				OutStatementPart += "\tjae Vrai" + to_string(TagNumber) + "\t# If above or equal\n";
+				if(isFunc){
+					OutFunctionPart += "\tjae Vrai" + to_string(TagNumber) + "\t# If above or equal\n";
+				} else {
+					OutStatementPart += "\tjae Vrai" + to_string(TagNumber) + "\t# If above or equal\n";
+				}
+				
 				break;
 			case INFE:
 				#ifdef DEBUG
 					cout << "\t\t# INFE expression" << endl;
 				#endif
-				OutStatementPart += "\tjbe Vrai" + to_string(TagNumber) + "\t# If below or equal\n";
+				if(isFunc){
+					OutFunctionPart += "\tjbe Vrai" + to_string(TagNumber) + "\t# If below or equal\n";
+				} else {
+					OutStatementPart += "\tjbe Vrai" + to_string(TagNumber) + "\t# If below or equal\n";
+				}
+				
 				break;
 			case INF:
 				#ifdef DEBUG
 					cout << "\t\t# INF expression" << endl;
 				#endif
-				OutStatementPart += "\tjb Vrai" + to_string(TagNumber) + "\t# If below\n";
+				if(isFunc){
+					OutFunctionPart += "\tjb Vrai" + to_string(TagNumber) + "\t# If below\n";
+				} else {
+					OutStatementPart += "\tjb Vrai" + to_string(TagNumber) + "\t# If below\n";
+				}
+				
 				break;
 			case SUP:
 				#ifdef DEBUG
 					cout << "\t\t# SUP expression" << endl;
 				#endif
-				OutStatementPart += "\tja Vrai" + to_string(TagNumber) + "\t# If above\n";
+				if(isFunc){
+					OutFunctionPart += "\tja Vrai" + to_string(TagNumber) + "\t# If above\n";
+				} else {
+					OutStatementPart += "\tja Vrai" + to_string(TagNumber) + "\t# If above\n";
+				}
+				
 				break;
 			default:
 				Error("Opérateur de comparaison inconnu");
 		}
-		tempPosition = OutStatementPart.length();
+		if(isFunc){
+			tempPosition = OutFunctionPart.length();
+		} else {
+			tempPosition = OutStatementPart.length();
+		}
 		
-		//OutStatementPart += "REPLACE"+ to_string(++TagNumber);
-	}
 	#ifdef DEBUG
 		cout << "# End of Expression()" << endl;
 	#endif
-	return BOOLEAN;
-
+	return BOOL;
+	}
+	return firstPart;
 }
 
 // AssignementStatement := Identifier ":=" Expression
 // Non type variable
 void AssignementStatement(void){
+	#ifdef DEBUG
+		std::cout << "# ----------- In AssignementStatement(void) ----------- " << endl;
+	#endif
 	string variable;
 	if(current != ID)
 		Error("Identificateur attendu");
-	if(!IsDeclared(lexer->YYText())){
-		cerr  <<  "Erreur : Variable '" << lexer->YYText() << "' non déclarée" << endl;
+	if(!IsDeclared(lexer->YYText()) && !IsFunc(lexer->YYText())){
+		cerr  <<  "Erreur : Variable ou procedure'" << lexer->YYText() << "' non déclarée" << endl;
 		exit(-1);
 	}
 	variable=lexer->YYText();
-	current=(TOKEN) lexer->yylex();
-	if(current != ASSIGN)
-		Error("caractères ':=' attendus");
-	current=(TOKEN) lexer->yylex();
-	Expression();
-	OutStatementPart +=  "\tpop " + variable +"\n";
+
+	if(IsDeclared(lexer->YYText())){
+		#ifdef DEBUG
+			std::cout << "# C'est une variable !! " << endl;
+		#endif
+		current=(TOKEN) lexer->yylex();
+		if(current != ASSIGN)
+			Error("caractères ':=' attendus");
+		current=(TOKEN) lexer->yylex();
+		enum TYPE VarType = DeclaredVariables[variable];
+		#ifdef DEBUG
+			cout << "# AVANT IF " << lexer->YYText() << endl;
+			cout << "# TYPE  " << VarType << endl;
+			cout << "# SIZE  " << getLength(lexer->YYText()) << endl;
+			cout << "# current  " << current << endl;
+		#endif	
+		
+
+		if(current == STRINGCONST && getLength(lexer->YYText()) == 3) {
+			string chartemp = lexer->YYText();
+			#ifdef DEBUG
+				cout << "# in if" << endl << "\t# pop '" << chartemp[1] <<"'\n";
+			#endif
+			if(isFunc){
+				OutFunctionPart +=  "\tpop '"; 
+				OutFunctionPart += chartemp[1];
+				OutFunctionPart +=  "'\n";
+			} else {
+				OutStatementPart += "\tpop '"; 
+				OutStatementPart += chartemp[1];
+				OutStatementPart +=  "'\n";
+			}
+			current=(TOKEN) lexer->yylex();
+			current=(TOKEN) lexer->yylex();
+			return;
+		}
+		enum TYPE ExpType = DOUBLE;
+		if(VarType != DOUBLE){
+			ExpType = Expression();
+		}
+		
+
+		if(VarType != ExpType){
+			Error("Can't different type");
+		}
+
+		switch(VarType){
+			case DOUBLE:
+				cout << "# IN DOUBLE" << endl;
+				if(isFunc){
+					OutFunctionPart +=  "\tpush ";
+					OutFunctionPart += lexer->YYText();
+					OutFunctionPart +=  "pop %rax\n\
+					\tmovb %al, " + variable +"\n";
+				} else {
+					OutStatementPart +=  "\tpop %rax\n\
+					\tmovb %al, " + variable +"\n";
+				}
+				current=(TOKEN) lexer->yylex();
+			break;
+			default:
+				cout << "# IN DEFAULT" << endl;
+				if(isFunc){
+					OutFunctionPart +=  "\tpop " + variable +"\n";
+				} else {
+					OutStatementPart +=  "\tpop " + variable +"\n";
+				}
+			break;
+		}
+	}
+
+	if(IsFunc(lexer->YYText())){
+		#ifdef DEBUG
+			std::cout << "# C'est une fonction !! " << endl;
+		#endif
+		if(isFunc){
+			OutFunctionPart += "\tcall " + variable +"\n";
+		} else {
+			OutStatementPart +=  "\tcall " + variable +"\n";
+		}
+		current=(TOKEN) lexer->yylex();
+	}
 }
 
 // Statement := AssignementStatement
@@ -478,12 +705,25 @@ void Statement(void){
 				DisplayStatement();
 				return;
 			}
+
+			if( strcmp(lexer->YYText(),"PROCEDURE" ) == 0){
+				#ifdef DEBUG
+					std::cout << "# PROCEDURE STATEMENT" << endl ;
+				#endif
+				ProcedureStatement();
+				return;
+			}
 			
 			if( strcmp(lexer->YYText(),"EXIT" ) == 0){
 				#ifdef DEBUG
 					std::cout << "# EXIT STATEMENT" << endl ;
 				#endif
-				OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\tmovl $0, %ebx  # Exits with exit status 0\n\tint $0x80\t# Interupte prog\n";
+					if(isFunc){
+						OutFunctionPart +="\tmovl $1, %eax  # System call number 1: exit()\n\tmovl $0, %ebx  # Exits with exit status 0\n\tint $0x80\t# Interupte prog\n";
+					} else {
+						OutStatementPart += "\tmovl $1, %eax  # System call number 1: exit()\n\tmovl $0, %ebx  # Exits with exit status 0\n\tint $0x80\t# Interupte prog\n";
+					}
+				
 				Statement(); // But continue to compile
 				return;
 			}
@@ -500,6 +740,9 @@ void Statement(void){
 				std::cout << "# # TOKEN == ID" << endl;
 			#endif
 			AssignementStatement();
+			return;
+		}
+		if( strcmp(lexer->YYText(), ".") == 0){
 			return;
 		}
 		Error("Instruction unreachable !");
@@ -553,6 +796,80 @@ int getLength(string input) {
 	return length;
 }
 
+enum TYPE Type(void){
+	if(current!=KEYWORD)
+		Error("Type needed !");
+
+	if( current == STRINGCONST){
+		current=(TOKEN) lexer->yylex();
+		return STR;
+	}
+	
+	if( strcmp(lexer->YYText(),"BOOL") == 0 ){
+		current=(TOKEN) lexer->yylex();
+		return BOOL;
+	}
+
+	if( strcmp(lexer->YYText(),"INT") == 0 ){
+		current=(TOKEN) lexer->yylex();
+		return INT;
+	}
+
+	if( strcmp(lexer->YYText(),"DOUBLE") == 0 ){
+		current=(TOKEN) lexer->yylex();
+		return DOUBLE;
+	}
+	if( strcmp(lexer->YYText(),"CHAR") == 0 ){
+		current=(TOKEN) lexer->yylex();
+		return CHAR;
+	}
+
+	if( strcmp(lexer->YYText(), "ARRAY") == 0 ) {
+		current = (TOKEN) lexer->yylex();
+		return ARRAY;
+	}
+	Error("Unrecognized type, plz read the doc !");
+	
+}
+
+void ProcedureStatement(void) {
+	isFunc = true;
+
+	#ifdef DEBUG
+		std::cout << "# ----------- WhileStatement(void) -----------" << endl;
+	#endif
+	unsigned long long tag=++TagNumber;
+	current = (TOKEN) lexer->yylex();
+	#ifdef DEBUG
+		std::cout << "# NAME OF PROC ==>" << lexer->YYText() << endl;
+	#endif
+	DeclaredFunc.insert(lexer->YYText());
+	OutFunctionPart += lexer->YYText();
+	OutFunctionPart += " :\n";
+
+	current = (TOKEN) lexer->yylex();
+	#ifdef DEBUG
+		std::cout << "# In Bracket " << lexer->YYText() << endl;
+	#endif
+	current = (TOKEN) lexer->yylex();
+
+
+	current = (TOKEN) lexer->yylex();
+	#ifdef DEBUG
+		std::cout << "# : " << lexer->YYText() << endl;
+	#endif
+	current = (TOKEN) lexer->yylex();
+	current = (TOKEN) lexer->yylex();
+
+	BlockStatement();
+
+	#ifdef DEBUG
+		std::cout << "# END OF PROC " << lexer->YYText() << endl;
+	#endif
+	OutFunctionPart += "ret\n";
+	isFunc = false;
+}
+
 // DISPLAY <Expression>
 void DisplayStatement(void){
 	unsigned long long tag=++TagNumber;
@@ -560,46 +877,140 @@ void DisplayStatement(void){
 		std::cout << "# ----------- In DisplayStatement(void) -----------" << endl;
 	#endif
 
-	OutStatementPart += "\n# DISPLAY ";
+	if(isFunc){
+		OutFunctionPart +=" \n# DISPLAY ";
+	} else {
+		OutStatementPart += "\n# DISPLAY ";
+	}
+	
 	current = (TOKEN) lexer->yylex();
 
 	if(current == STRINGCONST){
-		//std::cout << "\t.string " << lexer->YYText() << endl;
-		//std::cout << "\tmov .string " << lexer->YYText() <<", FormatString                     # The value to be displayed" << endl;
 		string currentWord = lexer->YYText();
-		OutStatementPart += currentWord + "\n";
+			if(isFunc){
+				OutFunctionPart += currentWord + "\n";
+			} else {
+				OutStatementPart += currentWord + "\n";
+			}
 		
 
 		currentWord.erase(0, 1); // erase the first "
 		currentWord.erase(currentWord.size() - 1 ); // erase the " of the end
-		// Need to do a length func
 		int len = getLength(currentWord); // Not good, because of \n \t ect..
-
+		
 		OutDeclarationPart += "STR" + to_string(TagNumber) + ":";
 		OutDeclarationPart += "\t.string \"" + currentWord + "\"\n";
-		/*OutDeclarationPart += "len" + to_string(TagNumber) + ":\n\tpush $" + to_string(len) + ", len";*/
-
-		OutStatementPart += "\tmovl $4, %eax # sys_write\n\
+		if(isFunc){
+			OutFunctionPart += "\tmovl $4, %eax # sys_write\n\
+\tmovl $1, %ebx # write to file descriptor 1 (stdout)\n\
+\tmovl $STR" + to_string(TagNumber) + ", %ecx # pointer to the string to print\n\
+\tmovl $" + to_string(len) + ", %edx # asks to print " + to_string(len) + " characters our of the string passed in %ecx\n\
+\tint $0x80 # call the system call\n";
+		} else {
+			OutStatementPart += "\tmovl $4, %eax # sys_write\n\
 \tmovl $1, %ebx # write to file descriptor 1 (stdout)\n\
 \tmovl $STR" + to_string(TagNumber) + ", %ecx # pointer to the string to print\n\
 \tmovl $" + to_string(len) + ", %edx # asks to print " + to_string(len) + " characters our of the string passed in %ecx\n\
 \tint $0x80 # call the system call\n";
 
-		// std::cout << "\t.print " << lexer->YYText() << endl; // print de "compilation"
+		}
+		
 		current = (TOKEN) lexer->yylex();
 	} else { // can be only a int for nowS
 		#ifdef DEBUGDISP
 			std::cout << "# OTHER" << endl;
 		#endif
-		OutStatementPart += lexer->YYText();
-		OutStatementPart += "\n";
-		Expression();
-		OutStatementPart += "\tpop %rdx                     # The value to be displayed\n\
-\tmovq $FormatString1, %rsi    # \"%llu\\n\" \n\
-\tmovl    $1, %edi \n\
-\tmovl    $0, %eax \n\
-\tcall    __printf_chk@PLT\n";
+		if(isFunc){
+			OutFunctionPart += lexer->YYText();
+			OutFunctionPart += "\n";
+		} else {
+			OutStatementPart += lexer->YYText();
+			OutStatementPart += "\n";
+		}
+		enum TYPE TypeExp = Expression();
+		cout << "TYPE = " << TypeExp << endl;
+		switch(TypeExp){
+			case CHAR:
+				if(isFunc){
+					OutFunctionPart += "\tpop %rdx                     # TYPE CHAR\n\
+			\tmovq $FormatString, %rsi  \n\
+			\tmovl    $1, %edi \n\
+			\tmovl    $0, %eax \n\
+			\tcall    __printf_chk@PLT\n";
+				} else {
+					OutStatementPart += "\tpop %rdx                     # TYPE CHAR\n\
+			\tmovq $FormatString, %rsi   \n\
+			\tmovl    $1, %edi \n\
+			\tmovl    $0, %eax \n\
+			\tcall    __printf_chk@PLT\n";
+			}
+			break;
+			case INT:
+				if(isFunc){
+					OutFunctionPart += "\tpop %rdx                     # TYPE INT\n\
+			\tmovq $FormatString1, %rsi    # \"%llu\\n\" \n\
+			\tmovl    $1, %edi \n\
+			\tmovl    $0, %eax \n\
+			\tcall    __printf_chk@PLT\n";
+				} else {
+					OutStatementPart += "\tpop %rdx                     # TYPE INT\n\
+			\tmovq $FormatString1, %rsi    # \"%llu\\n\" \n\
+			\tmovl    $1, %edi \n\
+			\tmovl    $0, %eax \n\
+			\tcall    __printf_chk@PLT\n";
+			}
+			break;
+			case DOUBLE:
+				if(isFunc){
+					OutFunctionPart += "\tmovsd (%rsp), %xmm0\t# put stack on top of %xmm0\n\
+					\tsubq	$16, %rsp\t\t# allocation for 3 additional doubles\n\
+				\tmovsd %xmm0, 8(%rsp)\n\
+				\tmovq $FormatString2, %rdi\t# \"%lf\\n\"\n\
+				\tmovq	$1, %rax\n\
+				\tcall	printf\n\
+				nop\n\
+				\taddq $24, %rsp\n";
+				} else {
+					OutStatementPart += "\tmovsd (%rsp), %xmm0\t# put stack on top of %xmm0\n\
+					\tsubq	$16, %rsp\t\t# add allocation for more doubles\n\
+				\tmovsd %xmm0, 8(%rsp)\n\
+				\tmovq $FormatString2, %rdi\n\
+				\tmovq	$1, %rax\n\
+				\tcall	printf\n\
+				nop\n\
+				\taddq $24, %rsp\n";
+				}
+			break;
+			case BOOL:
+				if(isFunc){
+					OutFunctionPart += "\tpop %rdx\t# Print True if 1 and False if 0\n\
+				\tcmpq $0, %rdx\n\
+				\tje False" + std::to_string(tag) + "\n\
+				\tmovq $TrueSTR, %rdi\t#  put true in rdi\n\
+				\tjmp Next" + std::to_string(tag) + "\n\
+				False" + std::to_string(tag) + ":\n\
+				\tmovq $FalseSTR, %rdi\t# put false in rdi \n\
+				Next" + std::to_string(tag) + ":\n\
+				\tcall	puts@PLT\t# print rdi\n";
+				} else {
+					OutStatementPart += "\tpop %rdx\t# Print True if 1 and False if 0\n\
+				\tcmpq $0, %rdx\n\
+				\tje False" + std::to_string(tag) + "\n\
+				\tmovq $TrueSTR, %rdi\t#  put true in rdi\n\
+				\tjmp Next" + std::to_string(tag) + "\n\
+				False" + std::to_string(tag) + ":\n\
+				\tmovq $FalseSTR, %rdi\t# put false in rdi \n\
+				Next" + std::to_string(tag) + ":\n\
+				\tcall	puts@PLT\t# print rdi\n";
+				}
+			break;
+			default:
+				Error("Unrecognized type, plz read the doc !");
+			break;
+			
+		}
 	}
+
 }
 
 // WHILE <Expression> DO <Statement> 	
@@ -610,26 +1021,41 @@ void WhileStatement(void){
 	#endif
 	unsigned long long tag=++TagNumber;
 	current = (TOKEN) lexer->yylex();
-	OutStatementPart += "while" + to_string(tag) + ":\n";
+	if(isFunc){
+		OutFunctionPart += "while" + to_string(tag) + ":\n";
+	} else {
+		OutStatementPart += "while" + to_string(tag) + ":\n";
+	}
+
 
 	if(current == RPARENT && strcmp(lexer->YYText(),"(")  ==  0){
 		expType = Expression();
-		if(expType != BOOLEAN){
-			Error("Boolean expression needed !");
+		if(expType != BOOL){
+			Error("BOOL expression needed !");
 		}
 	} else {
 		Error("Expression needed ! `WHILE <Expression> DO <Statement>.`");
 	}
-
-	OutStatementPart +=  "\tjmp EndWhile" + to_string(tag) + "\nVrai" + to_string(tag)+":\n";
+	if(isFunc){
+		OutFunctionPart += "\tjmp EndWhile" + to_string(tag) + "\nVrai" + to_string(tag)+":\n";
+	} else {
+		OutStatementPart +=  "\tjmp EndWhile" + to_string(tag) + "\nVrai" + to_string(tag)+":\n";
+	}
+	
 	if(current == KEYWORD && strcmp(lexer->YYText(),"DO")  ==  0){
 		current = (TOKEN) lexer->yylex();
 		BlockStatement();
 	} else {
 		Error("DO missing !");
 	}
-	OutStatementPart += "jmp while" + to_string(tag) + "\n\
+		if(isFunc){
+		OutFunctionPart +="jmp while" + to_string(tag) + "\n\
 EndWhile" + to_string(tag) + ":\n";
+	} else {
+			OutStatementPart += "jmp while" + to_string(tag) + "\n\
+EndWhile" + to_string(tag) + ":\n";
+	}
+
 }
 
 // FOR <AssignementStatement> To <Expression> DO <Statement>
@@ -645,53 +1071,90 @@ void ForStatement(void){
 	#endif
 	
 	if( current == NUMBER){
-		OutStatementPart += "movq $" ;
-		OutStatementPart +=  lexer->YYText(); 
-		OutStatementPart += ", %rcx # Get Start value\n";
+			if(isFunc){
+				OutFunctionPart += "movq $" ;
+				OutFunctionPart +=  lexer->YYText(); 
+				OutFunctionPart += ", %rcx # Get Start value\n";
+			} else {
+				OutStatementPart += "movq $" ;
+				OutStatementPart +=  lexer->YYText(); 
+				OutStatementPart += ", %rcx # Get Start value\n";
+			}
+
 		current = (TOKEN) lexer->yylex();
 	} else {
 		Error("Need Digit");
 	}
 
 	OutDeclarationPart += "i" + to_string(tag) + ": .quad 0\n";
-	OutStatementPart +="For" + to_string(tag) + ":\n";
+	if(isFunc){
+		OutFunctionPart += "For" + to_string(tag) + ":\n";
+	} else {
+		OutStatementPart += "For" + to_string(tag) + ":\n";
+	}
+
 
 	if( current == KEYWORD || strcmp(lexer->YYText(), "To") == 0){
 		current = (TOKEN) lexer->yylex(); // Get digit after To
+		if(isFunc){
+			OutFunctionPart +=  "\tcmp $";
+			OutFunctionPart +=  lexer->YYText();
+			OutFunctionPart += ", i" + to_string(tag) + " # To KEYWORD\n\
+\tjae EndFor"+ to_string(tag) + "\n";
+		} else {
 		OutStatementPart +=  "\tcmp $";
 		OutStatementPart +=  lexer->YYText();
 		OutStatementPart += ", i" + to_string(tag) + " # To KEYWORD\n\
 \tjae EndFor"+ to_string(tag) + "\n";
+		}
+
+
 		current = (TOKEN) lexer->yylex(); // Get Do
 	} else {
 		Error("To requiered");
 	}
 
 	if( current == KEYWORD || strcmp(lexer->YYText(), "DO") == 0 ){
-		OutStatementPart += "push i" + to_string(tag) + "\n\
+		if(isFunc){
+			OutFunctionPart += "push i" + to_string(tag) + "\n\
 \tpush $1\n\
 \tpop %rbx\n\
 \tpop %rax\n\
 \taddq	%rbx, %rax	# ADD\n\
 \tpush %rax\n\
 \tpop i" + to_string(tag) + "\n\n";
+		} else {
+			OutStatementPart += "push i" + to_string(tag) + "\n\
+\tpush $1\n\
+\tpop %rbx\n\
+\tpop %rax\n\
+\taddq	%rbx, %rax	# ADD\n\
+\tpush %rax\n\
+\tpop i" + to_string(tag) + "\n\n";
+		}
+
 		current = (TOKEN) lexer->yylex(); // Get Expression
 		BlockStatement();
 		#ifdef DEBUG
 			std::cout << "# After BlockStatement();" << lexer->YYText() << endl;
-			OutStatementPart += "\n# afterBlockStatement();\n";
 		#endif
 	} else {
 		Error("DO requiered");
 	}
-	OutStatementPart += "\n\tjmp For" + to_string(tag) + "\n\
+	if(isFunc){
+		OutFunctionPart += "\n\tjmp For" + to_string(tag) + "\n\
 EndFor" + to_string(tag) + ":\n\
 \tpush $0\n\
 \tpop i" + to_string(tag);
+	} else {
+		OutStatementPart += "\n\tjmp For" + to_string(tag) + "\n\
+EndFor" + to_string(tag) + ":\n\
+\tpush $0\n\
+\tpop i" + to_string(tag);
+	}
 
 	#ifdef DEBUG
 		std::cout << "# End of for" << lexer->YYText() << endl;
-		OutStatementPart += "\n# End of for\n\n\n";
 	#endif
 }
 
@@ -707,9 +1170,7 @@ void BlockStatement(void){
 	while ( current != KEYWORD || strcmp(lexer->YYText(), "END") != 0)
 	{
 		#ifdef DEBUG
-			OutStatementPart += "\t\t # WORD ==> ";
-			OutStatementPart += lexer->YYText();
-			OutStatementPart += "\n";
+			cout << "\t\t # WORD ==> "<< lexer->YYText()<< endl;
 		#endif
 		if( strcmp(lexer->YYText(), "END") != 0){
 			Statement();
@@ -734,15 +1195,12 @@ void BlockStatement(void){
 		current = (TOKEN) lexer->yylex();
 		if(strcmp(lexer->YYText(), ";") == 0){
 			current = (TOKEN) lexer->yylex(); // skip ;
-		}/*
-	} else {
-		Error("END Missing");
-	}*/
+		}
 	#ifdef DEBUG
 		std::cout << "# End of BlockStatement" << lexer->YYText() << endl;
-		OutStatementPart += "\n# End of BlockStatement\n\n\n";
 	#endif
 }
+
 
 // "IF" Expression "THEN" Action ["ELSE" Action (or can be a another if)]
 void IfStatement(void){
@@ -751,8 +1209,7 @@ void IfStatement(void){
 	#endif
 	TYPE expType;
 	unsigned long long tag=++TagNumber; // For unique name in asm program
-	//OutStatementPart += "TAG ===> " + to_string(tag) + "\n TagNumber ===> " + to_string(TagNumber) + "\n";
-	//current = (TOKEN) lexer->yylex(); // Get and cast next word
+
 	if(current != KEYWORD || strcmp(lexer->YYText(),"IF")  !=  0){
 		Error("In void IfStatement(void) without if");
 	}
@@ -767,12 +1224,10 @@ void IfStatement(void){
 		#define DEBUGEXP
 	#endif
 	expType = Expression();
-	if(expType != BOOLEAN){
-		Error("Boolean expression needed !");
+	if(expType != BOOL){
+		Error("BOOL expression needed !");
 	}
-	//OutStatementPart += "\tpop %rax\t# Get the result of expression\n";
-	//std::cout << "\tcmpq $0, %rax\t# Compare " << endl;
-	//OutStatementPart += "\tje VRAI" + to_string(tag) + "\t# jmp à VRAI" + to_string(tag) + " if false\n\tjmp Else10";
+
 	
 	#ifdef DEBUG
 		std::cout << "# WORD ==> " << lexer->YYText() << endl;
@@ -782,7 +1237,12 @@ void IfStatement(void){
 		Error(" Un 'THEN' attendu, en pascal on écrit IF Machin THEN JeFaisMachin");
 	}
 	current=(TOKEN) lexer->yylex();
-	OutStatementPart += "Vrai" + to_string(tag) + ":\t# if true skip else\n";
+	if(isFunc){
+		OutFunctionPart +=  "Vrai" + to_string(tag) + ":\t# if true skip else\n";;
+	} else {
+		OutStatementPart += "Vrai" + to_string(tag) + ":\t# if true skip else\n";
+	}
+	
 	// WHILE ! ELSE || END
 	#ifdef DEBUG
 		cout << "# WHILE ! ELSE || END" << endl;
@@ -804,13 +1264,23 @@ void IfStatement(void){
 		#ifdef DEBUG
 			std::cout << "# ELSE" << endl;
 		#endif
+		if(isFunc){
+			OutFunctionPart.insert( tempPosition, "\tjmp Else"+ to_string(tag) +"\n");
+			OutFunctionPart += "\tjmp Next"+ to_string(tag) +"\nElse"  + to_string(tag) + ":\n";
+		} else {
 		OutStatementPart.insert( tempPosition, "\tjmp Else"+ to_string(tag) +"\n");
-		OutStatementPart += "\tjmp Next"+ to_string(tag) +"\nElse"  + to_string(tag) + ":\n";
+		OutStatementPart += "\tjmp Next"+ to_string(tag) +"\nElse"  + to_string(tag) + ":\n";	
+		}
 		current=(TOKEN) lexer->yylex();
 		BlockStatement();
-		OutStatementPart += "Next" + to_string(tag) + ":\n";
+		if(isFunc){
+			OutFunctionPart += "Next" + to_string(tag) + ":\n";
+		} else {
+			OutStatementPart += "Next" + to_string(tag) + ":\n";
+		}
+		
 	} else {
-		//Error("ELSE or END missing !");
+		Error("ELSE or END missing !");
 	}
 }
 
@@ -824,14 +1294,14 @@ void VarStatement(void){
 		current=(TOKEN) lexer->yylex();
 	}
 
-	list<string> TempVar;
+	set<string> TempVar;
 
 	while (strcmp(lexer->YYText(), ":") != 0){
 		if(strcmp(lexer->YYText(), ",") != 0){
 			#ifdef DEBUG
 				std::cout << "# NEW VAR ==>" <<  lexer->YYText()<< endl;
 			#endif
-			TempVar.push_front(lexer->YYText());
+			TempVar.insert(lexer->YYText());
 		}
 		current=(TOKEN) lexer->yylex();
 	}
@@ -839,36 +1309,32 @@ void VarStatement(void){
 	if(strcmp(lexer->YYText(), ":") == 0){
 		current=(TOKEN) lexer->yylex();
 	}
-	string TypeOfVar = lexer->YYText();
+	TYPE TypeOfVar = Type();
 	#ifdef DEBUG
 		std::cout << "# TYPE is ==>" << TypeOfVar << endl;
 	#endif
 	current=(TOKEN) lexer->yylex();
 
-
-	if(TypeOfVar == "INT"){
-		for(const string & var : TempVar){
-			OutDeclarationPart += var + ":\t.quad 0\n";
-			DeclaredVariables.insert(var);
+	for (set<string>::iterator it=TempVar.begin(); it!=TempVar.end(); ++it){
+		switch(TypeOfVar){
+				case BOOL:
+				case INT:
+					OutDeclarationPart += *it + ":\t.quad 0\n";
+					break;
+				case DOUBLE:
+					OutDeclarationPart += *it + ":\t.double 0.0\n";
+					break;
+				case CHAR:
+					OutDeclarationPart += *it + ":\t.byte 0\n";
+					break;
+				default:
+					Error("Unrecognized type, plz read the doc !");
 		}
-		return;
-	}
-	if(TypeOfVar == "STR"){
-		for(const string & var : TempVar){
-			OutDeclarationPart += var + ":\t.string \"\"\n";
-			DeclaredVariables.insert(var);
-		}
-		return;
-	}
-	if(TypeOfVar == "FLOAT"){
-		for(const string & var : TempVar){
-			OutDeclarationPart += var + ":\t.double 0.0\n";
-			DeclaredVariables.insert(var);
-		}
-		return;
+		DeclaredVariables[*it]=TypeOfVar;
 	}
 
-	Error("Unrecognized type");
+
+	//Error("Unrecognized type");
 }
 
 // StatementPart := Statement {";" Statement} "."
@@ -878,7 +1344,7 @@ void StatementPart(void){
 main:\t\t\t# The main function body :\n\
 \tmovq %rsp, %rbp\t# Save the position of the stack's top\n";
 	Statement();
-	while(current == SEMICOLON || current == KEYWORD){
+	while(current == SEMICOLON || current == KEYWORD || current == ID){
 		if(current == SEMICOLON){
 			current=(TOKEN) lexer->yylex();
 		}
@@ -908,6 +1374,7 @@ int main(int argc,char** argv){	// First version : Source code on standard input
 
 	Program();
 	std::cout << "# ----------------- DeclarationPart ----------------- #" << endl << OutDeclarationPart << 
+	"# ----------------- FunctionPart ----------------- #" << endl << OutFunctionPart << 
 	"# ----------------- StatementPart ----------------- #" << endl << OutStatementPart << endl;
 	// Trailer for the gcc assembler / linker
 	std::cout  <<  "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top" << endl;
